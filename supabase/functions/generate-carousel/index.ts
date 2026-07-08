@@ -678,12 +678,14 @@ PROIBIDO nos imagePrompts e no conteúdo dos cards:
 - NUNCA gere imagePrompts que descrevam grades, mosaicos, grids de posts, capturas de tela de feeds ou interfaces de redes sociais. Cada card deve ser UMA ÚNICA imagem editorial coesa
 
 REGRAS DE LAYOUT (siga EXATAMENTE):
-- Card 1 (cover): Título impactante em CAIXA ALTA (máx ${hasTextLimits ? `${styleTextLimits.cover_title_max_chars} caracteres` : '10 palavras'}) + subtítulo curto descritivo${hasTextLimits ? ` (máx ${styleTextLimits.cover_subtitle_max_chars} caracteres)` : ''}
-- Cards 2 a ${numCards - 1} (content): Cada card tem DOIS blocos de texto:
-  - "bodyTop": Parágrafo principal (${hasTextLimits ? `máx ${styleTextLimits.content_body_top_max_chars} caracteres` : textSizeConfig.bodyTop}), informativo e direto. Deve conter trechos-chave que serão destacados em cor accent (coloque entre **asteriscos duplos** os trechos mais importantes, máx 8 palavras destacadas)
-  - "bodyBottom": Segundo parágrafo (${hasTextLimits ? `máx ${styleTextLimits.content_body_bottom_max_chars} caracteres` : textSizeConfig.bodyBottom}), complementar e conciso
+- Card 1 (cover): Título impactante em CAIXA ALTA (máx ${hasTextLimits ? `${styleTextLimits.cover_title_max_chars} caracteres` : '10 palavras'}). O subtítulo é OPCIONAL${hasTextLimits ? ` (quando houver, máx ${styleTextLimits.cover_subtitle_max_chars} caracteres)` : ''} — inclua apenas se agregar valor real. Alguns posts devem ter só título, outros título + subtítulo.
+- Cards 2 a ${numCards - 1} (content): VARIAÇÃO OBRIGATÓRIA — cada card deve ter uma estrutura de texto DIFERENTE dos outros. NUNCA repita o mesmo padrão. Combine livremente:
+  - "title" (opcional): título curto/impactante quando fizer sentido
+  - "bodyTop" (opcional): parágrafo principal (${hasTextLimits ? `máx ${styleTextLimits.content_body_top_max_chars} caracteres` : textSizeConfig.bodyTop}), com **trechos destacados** entre asteriscos duplos (máx 8 palavras destacadas)
+  - "bodyBottom" (opcional): parágrafo complementar (${hasTextLimits ? `máx ${styleTextLimits.content_body_bottom_max_chars} caracteres` : textSizeConfig.bodyBottom}) — use APENAS quando realmente complementar
+  - Exemplos de variação aceitos e desejados: (a) só title, (b) só bodyTop, (c) title + bodyTop, (d) title + bodyBottom, (e) bodyTop + bodyBottom, (f) title + bodyTop + bodyBottom. NUNCA use o mesmo formato em dois cards consecutivos. Trate cada card como um post único do Instagram — quebras naturais, quantidade de texto diferente, ritmo humano.
   - "imagePrompt": Descrição detalhada para gerar uma imagem de alta qualidade. ${hasMarketplaceStyle ? 'DEVE seguir o estilo visual definido abaixo.' : 'Se o tópico mencionar marcas, produtos ou PESSOAS REAIS, descreva visualmente o que deveria aparecer com detalhes'}
-  - "searchTerms": Array de termos para buscar fotos de referência na web (ex: ["Toguro fitness", "Cimed logo", "suplemento proteico"]). Inclua nomes reais de pessoas e marcas mencionadas.
+  - "searchTerms": Array de termos para buscar fotos de referência na web
   - "needsImage": boolean - true se este card precisa de imagem baseado no conteúdo
 - Card ${numCards} (cta): CTA + mensagem motivacional (${hasTextLimits ? `título máx ${styleTextLimits.cta_title_max_chars} chars, corpo máx ${styleTextLimits.cta_body_max_chars} chars` : 'texto curto'}). ${body.brandName ? `Use "${body.brandName}" como nome da marca/autor.` : body.userName ? `Use "${body.userName}" como nome do autor.` : 'NÃO inclua nome de autor.'} NUNCA use placeholders como "[Nome do Usuário]", "[Seu Nome]", "[Nome da Marca]" etc. Se não souber o nome, simplesmente OMITA a linha de autor.
 ${hasTextLimits ? `\n⚠️ LIMITES DE CARACTERES OBRIGATÓRIOS (extraídos da análise visual do estilo selecionado):
@@ -728,8 +730,9 @@ Responda APENAS em JSON válido:
     },
     {
       "type": "content",
-      "bodyTop": "Parágrafo principal com **trechos destacados** em negrito...",
-      "bodyBottom": "Segundo parágrafo complementar...",
+      "title": "(opcional) título curto",
+      "bodyTop": "(opcional) parágrafo com **destaques**",
+      "bodyBottom": "(opcional, use só quando complementar de verdade)",
       "imagePrompt": "descrição visual para imagem do card",
       "searchTerms": ["termo de busca"],
       "needsImage": true

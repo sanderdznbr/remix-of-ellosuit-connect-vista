@@ -698,6 +698,35 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Schedule to calendar dialog */}
+      <Dialog open={!!scheduleItem} onOpenChange={(o) => !o && setScheduleItem(null)}>
+        <DialogContent style={{ backgroundColor: '#0f0f15', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}>
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4 text-purple-400" /> Mover para o calendário
+            </DialogTitle>
+            <DialogDescription style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Escolha a data em que este post será publicado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <input
+              type="date"
+              value={scheduleDate}
+              onChange={(e) => setScheduleDate(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg text-sm"
+              style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', colorScheme: 'dark' }}
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setScheduleItem(null)} style={{ color: 'rgba(255,255,255,0.5)' }}>Cancelar</Button>
+            <Button onClick={confirmSchedule} disabled={!scheduleDate} className="gap-2" style={{ backgroundColor: '#8B5CF6', color: '#fff' }}>
+              <CalendarIcon className="w-4 h-4" /> Vincular à data
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

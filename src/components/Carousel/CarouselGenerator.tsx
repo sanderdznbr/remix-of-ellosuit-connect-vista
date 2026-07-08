@@ -5479,7 +5479,9 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
     const currentData = carouselDataRef.current;
     if (!currentData) return;
 
-    const newIndex = currentData.cards.length;
+    // Insert new card right AFTER the currently active card (so "+" respects position)
+    const insertAt = Math.min(currentData.cards.length, (activeCardIndex ?? currentData.cards.length - 1) + 1);
+    const newIndex = insertAt;
     const isTextOnlyCard = mode === 'solid';
 
     const isFullBleedMarketplace = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
@@ -5496,7 +5498,9 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         layout: 'dark',
         needsImage: requiresImage,
       };
-      return { ...prev, cards: [...prev.cards, newCard] };
+      const cards = [...prev.cards];
+      cards.splice(insertAt, 0, newCard);
+      return { ...prev, cards };
     });
 
     setActiveCardIndex(newIndex);

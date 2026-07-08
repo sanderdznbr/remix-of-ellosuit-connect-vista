@@ -9882,7 +9882,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* ===== BASIC MODE: split layout on desktop, gallery on mobile ===== */}
             {resultViewMode === 'basic' && (
-              <div className="w-full flex flex-col md:flex-row md:items-start md:justify-center md:gap-6 items-center relative" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0' }}>
+              <div className="w-full flex flex-col md:flex-row md:items-start md:justify-between md:gap-6 items-center relative md:min-h-[calc(100vh-6rem)] md:px-6" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0' }}>
 
                 {/* ===== DESKTOP SIDEBAR — always visible on md+ ===== */}
                 {!isMobileView && (
@@ -10089,8 +10089,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 )}
 
 
-                {/* ===== POST CONTENT (card gallery) ===== */}
-                <div className="flex flex-col items-center flex-1 md:max-w-[520px]">
+                {/* ===== POST CONTENT (card gallery) — centered ===== */}
+                <div className="flex flex-col items-center justify-center flex-1 md:min-h-[calc(100vh-6rem)] md:max-w-none w-full">
+
 
                 {/* Main card — single large view with swipe */}
                 <div
@@ -10131,12 +10132,22 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   )}
 
                   {/* Card display */}
+                  {(() => {
+                    const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+                    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+                    const isDesk = vw >= 768;
+                    const maxByH = isDesk ? Math.min(vh - 200, 720) : 420;
+                    const maxByW = isDesk ? Math.min(vw - 760, 560) : vw - 80;
+                    const baseW = Math.max(320, Math.min(maxByW, maxByH * (cardW / cardH)));
+                    const cardDisplayW = baseW;
+                    const cardDisplayH = baseW * (cardH / cardW);
+                    return (
                   <div
                     className="relative rounded-2xl overflow-hidden shadow-2xl cursor-pointer group"
                     style={{ 
-                      width: Math.min(typeof window !== 'undefined' ? window.innerWidth - 80 : 340, 420),
-                      height: Math.min(typeof window !== 'undefined' ? window.innerWidth - 80 : 340, 420) * (cardH / cardW),
-                      boxShadow: `0 20px 60px -15px rgba(0,0,0,0.5), 0 0 40px -10px rgba(${themeRgb},0.15)`,
+                      width: cardDisplayW,
+                      height: cardDisplayH,
+                      boxShadow: `0 30px 80px -20px rgba(0,0,0,0.6), 0 0 60px -15px rgba(${themeRgb},0.22)`,
                     }}
                     onClick={() => {
                       if (!isCardLocked(activeCardIndex)) {
@@ -10147,7 +10158,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <div style={{ 
                       width: previewW, 
                       height: previewH, 
-                      transform: `scale(${Math.min(typeof window !== 'undefined' ? window.innerWidth - 80 : 340, 420) / previewW})`, 
+                      transform: `scale(${cardDisplayW / previewW})`, 
                       transformOrigin: 'top left' 
                     }}>
                       {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}
@@ -10173,6 +10184,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </div>
                     </div>
                   </div>
+                    );
+                  })()}
+
 
                   {/* Next arrow */}
                   {activeCardIndex < carouselData.cards.length - 1 && (
@@ -10223,6 +10237,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   {activeCardIndex + 1} <span className="text-white/20">/</span> {carouselData.cards.length}
                 </p>
                 </div>
+
+                {/* Right spacer to visually center the post against the left sidebar */}
+                {!isMobileView && (
+                  <div aria-hidden className="hidden md:block w-[300px] flex-shrink-0" />
+                )}
               </div>
             )}
 

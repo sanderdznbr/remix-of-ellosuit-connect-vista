@@ -5480,7 +5480,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
     if (!currentData) return;
 
     // Insert new card right AFTER the currently active card (so "+" respects position)
-    const insertAt = Math.min(currentData.cards.length, (activeCardIndexRef.current ?? currentData.cards.length - 1) + 1);
+    const insertAt = Math.min(currentData.cards.length, (activeCardIndex ?? currentData.cards.length - 1) + 1);
     const newIndex = insertAt;
     const isTextOnlyCard = mode === 'solid';
 

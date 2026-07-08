@@ -178,7 +178,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       {/* Very subtle top vignette */}
       <div className="absolute inset-x-0 top-0 h-40 pointer-events-none z-0" style={{ background: 'radial-gradient(ellipse at top, rgba(139,92,246,0.05) 0%, transparent 70%)' }} />
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10 sidebar-scroll" style={{ WebkitOverflowScrolling: 'touch' as any }}>
+      <div id="dashboard-sidebar-nav" role="navigation" aria-label="Menu principal" className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10 sidebar-scroll" style={{ WebkitOverflowScrolling: 'touch' as any }}>
         {/* Logo + collapse */}
         <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-5'} pt-5 pb-4`}>
           <img src={faviconIcon} alt="Logo" className="h-8 w-8 shrink-0 opacity-95" />

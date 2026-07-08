@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Paperclip, Loader2, RotateCcw, Type } from 'lucide-react';
+import { X, Send, Paperclip, Loader2, RotateCcw, Type, Sparkles, MessageSquare } from 'lucide-react';
 
 type ChatMsg =
   | { id: string; role: 'assistant'; kind: 'text'; content: string }
@@ -29,6 +29,7 @@ export const AddCardChatModal = ({
   open, onClose, cardType, textSize, onTextSizeChange, generating, autoText,
   generate, onApprove, onManualCreate, themeRgb, themeRgb2, themeHex,
 }: Props) => {
+  const [mode, setMode] = useState<'auto' | 'chat'>('chat');
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<string[]>([]);
@@ -36,21 +37,31 @@ export const AddCardChatModal = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const greetingFor = (m: 'auto' | 'chat'): ChatMsg => ({
+    id: uid(),
+    role: 'assistant',
+    kind: 'text',
+    content: m === 'auto'
+      ? `Modo **Criar automaticamente** ativo. Vou decidir sozinho o ângulo, título e corpo do próximo card ${cardType === 'composed' ? 'composto' : 'sólido'}. Se quiser, anexe uma imagem antes de clicar em **Gerar agora** — mas nenhum texto é obrigatório.`
+      : `Modo **Conduzir por chat** ativo. Me diga exatamente o que quer no card ${cardType === 'composed' ? 'composto' : 'sólido'}: tema, tom, referência, screenshot, print de produto. Eu sigo sua instrução à risca.`,
+  });
+
   // Reset & greet when opened
   useEffect(() => {
     if (open) {
-      setMessages([
-        {
-          id: uid(),
-          role: 'assistant',
-          kind: 'text',
-          content: `Vamos criar seu novo card ${cardType === 'composed' ? 'composto' : 'sólido'}. Me diga o que quer trazer nele — pode digitar um tema, colar uma referência, anexar imagem/screenshot ou clicar em **Criar automaticamente** que eu decido.`,
-        },
-      ]);
+      setMode('chat');
+      setMessages([greetingFor('chat')]);
       setInput('');
       setAttachments([]);
     }
   }, [open, cardType]);
+
+  // Swap greeting when mode changes while open
+  useEffect(() => {
+    if (!open) return;
+    setMessages([greetingFor(mode)]);
+    setInput('');
+  }, [mode]);
 
   // Push AI suggestion when autoText arrives
   useEffect(() => {
@@ -128,20 +139,39 @@ export const AddCardChatModal = ({
 
 
           {/* Header */}
-          <div className="relative flex items-center justify-between px-6 py-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-            <div>
+          <div className="relative flex items-center justify-between px-6 py-4 border-b gap-4" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+            <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">Novo card</p>
-              <p className="text-white font-semibold text-[16px] leading-tight mt-1">Vamos conversar</p>
+              <p className="text-white font-semibold text-[16px] leading-tight mt-1 truncate">
+                {mode === 'auto' ? 'Deixa comigo' : 'Vamos conversar'}
+              </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => send(true)}
-                disabled={generating}
-                className="px-3.5 py-1.5 rounded-full text-[11px] font-medium transition-all disabled:opacity-40 hover:bg-white/[0.05]"
-                style={{ color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)' }}
-              >
-                Criar automaticamente
-              </button>
+              {/* Mode selector */}
+              <div className="flex items-center p-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <button
+                  onClick={() => setMode('chat')}
+                  disabled={generating}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all disabled:opacity-40"
+                  style={mode === 'chat'
+                    ? { backgroundColor: `rgba(${themeRgb},0.9)`, color: '#fff', boxShadow: `0 2px 10px -2px rgba(${themeRgb},0.5)` }
+                    : { color: 'rgba(255,255,255,0.55)' }}
+                >
+                  <MessageSquare className="h-3 w-3" />
+                  Conduzir por chat
+                </button>
+                <button
+                  onClick={() => setMode('auto')}
+                  disabled={generating}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all disabled:opacity-40"
+                  style={mode === 'auto'
+                    ? { backgroundColor: `rgba(${themeRgb},0.9)`, color: '#fff', boxShadow: `0 2px 10px -2px rgba(${themeRgb},0.5)` }
+                    : { color: 'rgba(255,255,255,0.55)' }}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Automático
+                </button>
+              </div>
               <button onClick={onClose} className="h-9 w-9 rounded-full hover:bg-white/[0.06] flex items-center justify-center transition-colors">
                 <X className="h-4 w-4 text-white/50" />
               </button>
@@ -228,57 +258,74 @@ export const AddCardChatModal = ({
 
           {/* Composer */}
           <div className="px-5 py-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-            <div className="relative flex items-end gap-2 rounded-2xl p-2" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={(e) => handleAttach(e.target.files)} />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={attachments.length >= 4}
-                className="h-9 w-9 rounded-lg hover:bg-white/[0.06] flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-30"
-                title="Anexar imagem"
-              >
-                <Paperclip className="h-4 w-4 text-white/50" />
-              </button>
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-                placeholder="Descreva o card, cole referências ou peça uma ideia..."
-                rows={1}
-                className="flex-1 bg-transparent resize-none outline-none text-[14px] text-white/90 placeholder-white/30 py-2 px-1 max-h-32"
-              />
-              <button
-                onClick={() => {
-                  const text = input.trim();
-                  if (text || attachments.length > 0) {
-                    // Manual "create with typed text as title"
-                    if (text && text.split(' ').length <= 20 && !generating && messages.filter(m => m.role === 'assistant' && m.kind === 'suggestion').length === 0) {
-                      // treat as instruction: let AI turn into card
-                    }
-                    send();
-                  }
-                }}
-                disabled={generating || (!input.trim() && attachments.length === 0)}
-                className="h-9 px-4 rounded-lg flex items-center gap-1.5 transition-all disabled:opacity-30 flex-shrink-0"
-                style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.9), rgba(${themeRgb2},0.75))`, boxShadow: `0 4px 12px -4px rgba(${themeRgb},0.5)` }}
-              >
-                {generating ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4 text-white" />}
-              </button>
-            </div>
-            <div className="flex items-center justify-between mt-2 px-1">
-              <p className="text-[10px] text-white/25">Enter para enviar · Shift+Enter nova linha</p>
-              <button
-                onClick={() => {
-                  const text = input.trim();
-                  if (text) onManualCreate({ title: text, body: '' }, attachments);
-                }}
-                disabled={!input.trim()}
-                className="text-[10px] text-white/40 hover:text-white/70 transition-colors flex items-center gap-1 disabled:opacity-30"
-              >
-                <Type className="h-2.5 w-2.5" />
-                Usar como texto manual
-              </button>
-            </div>
+            {mode === 'auto' ? (
+              <div className="flex items-center gap-2">
+                <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={(e) => handleAttach(e.target.files)} />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={attachments.length >= 4 || generating}
+                  className="h-11 px-3 rounded-xl flex items-center gap-1.5 text-[12px] text-white/60 hover:text-white hover:bg-white/[0.05] transition-colors disabled:opacity-30"
+                  style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <Paperclip className="h-3.5 w-3.5" />
+                  Anexar (opcional)
+                </button>
+                <button
+                  onClick={() => send(true)}
+                  disabled={generating}
+                  className="flex-1 h-11 rounded-xl flex items-center justify-center gap-2 text-[13px] font-semibold text-white transition-all disabled:opacity-40 hover:opacity-90"
+                  style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.95), rgba(${themeRgb2},0.8))`, boxShadow: `0 6px 20px -6px rgba(${themeRgb},0.6)` }}
+                >
+                  {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  Gerar agora
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="relative flex items-end gap-2 rounded-2xl p-2" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={(e) => handleAttach(e.target.files)} />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={attachments.length >= 4}
+                    className="h-9 w-9 rounded-lg hover:bg-white/[0.06] flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-30"
+                    title="Anexar imagem"
+                  >
+                    <Paperclip className="h-4 w-4 text-white/50" />
+                  </button>
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+                    placeholder="Descreva o card, cole referências ou peça uma ideia..."
+                    rows={1}
+                    className="flex-1 bg-transparent resize-none outline-none text-[14px] text-white/90 placeholder-white/30 py-2 px-1 max-h-32"
+                  />
+                  <button
+                    onClick={() => { if (input.trim() || attachments.length > 0) send(); }}
+                    disabled={generating || (!input.trim() && attachments.length === 0)}
+                    className="h-9 px-4 rounded-lg flex items-center gap-1.5 transition-all disabled:opacity-30 flex-shrink-0"
+                    style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.9), rgba(${themeRgb2},0.75))`, boxShadow: `0 4px 12px -4px rgba(${themeRgb},0.5)` }}
+                  >
+                    {generating ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4 text-white" />}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between mt-2 px-1">
+                  <p className="text-[10px] text-white/25">Enter para enviar · Shift+Enter nova linha</p>
+                  <button
+                    onClick={() => {
+                      const text = input.trim();
+                      if (text) onManualCreate({ title: text, body: '' }, attachments);
+                    }}
+                    disabled={!input.trim()}
+                    className="text-[10px] text-white/40 hover:text-white/70 transition-colors flex items-center gap-1 disabled:opacity-30"
+                  >
+                    <Type className="h-2.5 w-2.5" />
+                    Usar como texto manual
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </motion.div>
       </motion.div>

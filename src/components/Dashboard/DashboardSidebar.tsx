@@ -104,8 +104,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       return (
         <button
           onClick={onClick}
-          className="relative w-full flex items-center justify-center py-2.5 group cursor-pointer"
+          className="relative w-full flex items-center justify-center py-2.5 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
           title={label}
+          aria-label={label}
+          aria-current={active ? 'page' : undefined}
         >
           <span
             className={`absolute left-0 top-1/2 -translate-y-1/2 w-[2px] rounded-full transition-all ${
@@ -123,7 +125,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
     return (
       <button
         onClick={onClick}
-        className={`relative w-full flex items-center gap-3 pl-5 pr-3 py-2.5 text-[14px] tracking-tight transition-all cursor-pointer group ${
+        aria-current={active ? 'page' : undefined}
+        className={`relative w-full flex items-center gap-3 pl-5 pr-3 py-2.5 text-[14px] tracking-tight transition-all cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 ${
           active ? 'text-white' : 'text-white/50 hover:text-white/90'
         }`}
       >
@@ -157,12 +160,16 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       {collapsedProp && (
         <div
           className={`fixed inset-0 z-30 pointer-events-none transition-all duration-300 ${hovered ? 'opacity-100 backdrop-blur-md bg-black/30' : 'opacity-0 backdrop-blur-0 bg-black/0'}`}
+          aria-hidden="true"
         />
       )}
     <aside
       onMouseEnter={() => collapsedProp && setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`relative ${collapsedProp ? 'w-[64px]' : 'w-[264px]'} h-screen shrink-0 transition-all duration-300`}
+      aria-label="Navegação principal"
+      aria-expanded={!collapsed}
+      data-state={collapsed ? 'collapsed' : 'expanded'}
     >
       <div
         className={`${collapsed ? 'w-[64px]' : 'w-[264px]'} h-screen flex flex-col overflow-hidden transition-all duration-300 border-r absolute top-0 left-0 z-40 ${collapsedProp && hovered ? 'shadow-2xl shadow-black/50' : ''}`}
@@ -174,12 +181,12 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       {/* Very subtle top vignette */}
       <div className="absolute inset-x-0 top-0 h-40 pointer-events-none z-0" style={{ background: 'radial-gradient(ellipse at top, rgba(139,92,246,0.05) 0%, transparent 70%)' }} />
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10 sidebar-scroll" style={{ WebkitOverflowScrolling: 'touch' as any }}>
+      <div id="dashboard-sidebar-nav" role="navigation" aria-label="Menu principal" className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10 sidebar-scroll" style={{ WebkitOverflowScrolling: 'touch' as any }}>
         {/* Logo + collapse */}
         <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-5'} pt-5 pb-4`}>
           <img src={faviconIcon} alt="Logo" className="h-8 w-8 shrink-0 opacity-95" />
           {!collapsed && onToggleCollapse && (
-            <button onClick={onToggleCollapse} className="p-1.5 rounded-md hover:bg-white/[0.04] text-white/25 hover:text-white/60 transition-colors cursor-pointer" title="Recolher">
+            <button onClick={onToggleCollapse} className="p-1.5 rounded-md hover:bg-white/[0.04] text-white/25 hover:text-white/60 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20" title="Recolher" aria-label="Recolher sidebar" aria-expanded={true} aria-controls="dashboard-sidebar-nav">
               <PanelLeftClose className="w-[15px] h-[15px]" />
             </button>
           )}
@@ -278,7 +285,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           <div className="flex flex-col items-center py-3 gap-2">
             <TrialStatusBadge collapsed />
             {onToggleCollapse && (
-              <button onClick={onToggleCollapse} className="p-2 rounded-md hover:bg-white/[0.05] text-white/25 hover:text-white/60 transition-colors cursor-pointer" title="Expandir">
+              <button onClick={onToggleCollapse} className="p-2 rounded-md hover:bg-white/[0.05] text-white/25 hover:text-white/60 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20" title="Expandir" aria-label="Expandir sidebar" aria-expanded={false} aria-controls="dashboard-sidebar-nav">
                 <PanelLeftOpen className="w-[15px] h-[15px]" />
               </button>
             )}

@@ -219,7 +219,7 @@ const PromptGallery: React.FC = () => {
           company_id: companyId,
           user_id: user.id,
           title: title.trim(),
-          content: content.trim(),
+          content: composeContent(),
           avatar_url: avatarUrl || null,
         } as any).select().single();
         if (error) throw error;

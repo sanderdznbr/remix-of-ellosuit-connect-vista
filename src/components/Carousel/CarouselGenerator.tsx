@@ -5434,16 +5434,22 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         })
         .filter(Boolean) || [];
 
+      const newCardPosition = (currentData?.cards.length || 0) + 1; // 1-based position of the new card
+      const totalCards = (currentData?.cards.length || 7) + 1;
+
+      const existingBlock = existingCardSummaries.length > 0
+        ? `\n\n[CARDS JÁ EXISTENTES NO CARROSSEL — NÃO REPETIR NENHUM DELES]:\n${existingCardSummaries.join('\n')}`
+        : '';
       const instructionBlock = userInstruction
-        ? `\n\n[INSTRUÇÃO OBRIGATÓRIA DO USUÁRIO PARA O NOVO CARD — SIGA À RISCA]: ${userInstruction}${attachedImageUrls && attachedImageUrls.length > 0 ? `\n[O usuário anexou ${attachedImageUrls.length} imagem(ns) de referência que devem ser usadas como base visual/contextual do card]` : ''}`
-        : (attachedImageUrls && attachedImageUrls.length > 0 ? `\n\n[O usuário anexou ${attachedImageUrls.length} imagem(ns) de referência que devem guiar o novo card]` : '');
+        ? `\n\n[INSTRUÇÃO OBRIGATÓRIA DO USUÁRIO PARA O CARD ${newCardPosition} DE ${totalCards} — SIGA À RISCA, ESTE É O ÚNICO CARD QUE IMPORTA]: ${userInstruction}${attachedImageUrls && attachedImageUrls.length > 0 ? `\n[O usuário anexou ${attachedImageUrls.length} imagem(ns) de referência (screenshots/prints) que devem ser INCORPORADAS visualmente e contextualmente NESSE card específico. O card DEVE falar sobre o que a imagem mostra.]` : ''}\n\n[REGRA CRÍTICA]: O card ${newCardPosition} DEVE seguir EXATAMENTE a instrução acima. Os outros cards podem ser genéricos ou repetir os existentes — só o card ${newCardPosition} importa nesta geração.`
+        : (attachedImageUrls && attachedImageUrls.length > 0 ? `\n\n[O usuário anexou ${attachedImageUrls.length} imagem(ns) de referência que devem guiar VISUALMENTE E CONTEXTUALMENTE o card ${newCardPosition} de ${totalCards}]` : '');
 
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: `${topic.trim()}${instructionBlock}`,
+          topic: `${topic.trim()}${existingBlock}${instructionBlock}`,
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-          cardCount: (currentData?.cards.length || 7) + 1,
+          cardCount: totalCards,
           imageCardIndices: [(currentData?.cards.length || 0)],
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
           ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
@@ -5458,7 +5464,8 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       if (!error && data?.success && data?.data?.cards) {
         const contentCards = data.data.cards.filter((c: any) => c.type === 'content');
         if (contentCards.length > 0) {
-          const src = contentCards[0];
+          // Pick the LAST content card — that's the newly added one (previous cards mirror existing ones).
+          const src = contentCards[contentCards.length - 1];
           setAddCardModal(prev => ({
             ...prev,
             autoText: { title: src.bodyTop || src.body || src.title || '', body: src.bodyBottom || '' },

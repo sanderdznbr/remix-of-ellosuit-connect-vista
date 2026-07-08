@@ -10296,37 +10296,21 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         )}
                       </div>
 
-                      <div className="mx-4 h-px bg-white/[0.05] my-2" />
-
-                      {/* MAIS AÇÕES */}
-                      <div className="px-5 pt-1 pb-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Mais ações</span>
-                      </div>
-                      <div className="px-3 pb-3 space-y-0.5">
-                        <button
-                          onClick={() => {
-                            const card = carouselData.cards[activeCardIndex];
-                            if (!card) return;
-                            const newCard = JSON.parse(JSON.stringify(card));
-                            const newCards = [...carouselData.cards];
-                            newCards.splice(activeCardIndex + 1, 0, newCard);
-                            setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
-                            setActiveCardIndex(activeCardIndex + 1);
-                          }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
-                          <Layers className="h-4 w-4 text-sky-400" />
-                          Duplicar card
-                        </button>
-                        {postCaption && (
-                          <button
-                            onClick={() => { navigator.clipboard.writeText(postCaption); toast({ title: 'Legenda copiada!' }); }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
-                            <Copy className="h-4 w-4 text-amber-400" />
-                            Copiar legenda
-                          </button>
-                        )}
-                      </div>
+                      {postCaption && (
+                        <>
+                          <div className="mx-4 h-px bg-white/[0.05] my-2" />
+                          <div className="px-3 pb-3 space-y-0.5">
+                            <button
+                              onClick={() => { navigator.clipboard.writeText(postCaption); toast({ title: 'Legenda copiada!' }); }}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                              <Copy className="h-4 w-4 text-amber-400" />
+                              Copiar legenda
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
+
 
                     {/* Export CTA — sticky footer inside sidebar */}
                     <div className="px-4 pt-3 pb-4 border-t border-white/5">

@@ -10085,8 +10085,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
                     const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
                     const isDesk = vw >= 768;
-                    const maxByH = isDesk ? Math.min(vh - 160, 820) : 420;
-                    const maxByW = isDesk ? Math.min(vw - 700, 640) : vw - 80;
+                    const maxByH = isDesk ? Math.min(vh - 220, 620) : 420;
+                    const maxByW = isDesk ? Math.min(vw - 780, 480) : vw - 80;
                     const baseW = Math.max(320, Math.min(maxByW, maxByH * (cardW / cardH)));
                     const cardDisplayW = baseW;
                     const cardDisplayH = baseW * (cardH / cardW);

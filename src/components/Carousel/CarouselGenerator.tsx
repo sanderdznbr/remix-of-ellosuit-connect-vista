@@ -9471,15 +9471,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <Home className="w-5 h-5 text-white/60" />
                 </button>
               </div>
-              <button
-                onClick={() => { if (isGuest) { setShowGuestPaywall(true); } else { setShowExportMenu(true); } }}
-                disabled={exporting}
-                className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white transition-all disabled:opacity-50"
-                style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}
-              >
-                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                Salvar Post
-              </button>
             </div>
             )}
             {/* Subtle background glow effects */}
@@ -9882,7 +9873,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* ===== BASIC MODE: split layout on desktop, gallery on mobile ===== */}
             {resultViewMode === 'basic' && (
-              <div className="w-full flex flex-col md:flex-row md:items-center md:justify-between md:gap-5 items-center relative md:min-h-[calc(100vh-6rem)] md:px-5" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0' }}>
+              <div className="w-full flex flex-col md:flex-row md:items-start md:justify-between md:gap-5 items-center relative md:min-h-[calc(100vh-6rem)] md:px-5 md:pt-4" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0' }}>
                 {!isMobileView && (
                   <div aria-hidden className="fixed inset-0 -z-10 pointer-events-none" style={{ background: 'radial-gradient(ellipse 90% 70% at 50% 40%, #060610 0%, #030308 55%, #000000 100%)' }} />
                 )}
@@ -9890,7 +9881,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 {/* ===== DESKTOP SIDEBAR — always visible on md+ ===== */}
                 {!isMobileView && (
                   <div
-                    className="hidden md:flex flex-col w-[280px] flex-shrink-0 rounded-[20px] overflow-hidden self-center max-h-[calc(100vh-8rem)]"
+                    className="hidden md:flex flex-col w-[280px] flex-shrink-0 rounded-[20px] overflow-hidden max-h-[calc(100vh-8rem)]"
                     style={{
                       background: 'linear-gradient(180deg, rgba(8,8,12,0.55) 0%, rgba(4,4,8,0.65) 100%)',
                       border: '1px solid rgba(255,255,255,0.06)',
@@ -9921,27 +9912,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </div>
                     </div>
 
-                    {/* Hero Export CTA */}
-                    <div className="px-4 pb-4">
-                      <button
-                        onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)}
-                        disabled={exporting}
-                        className="group relative flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl text-[14px] font-semibold text-white transition-all disabled:opacity-50 w-full overflow-hidden"
-                        style={{
-                          background: `linear-gradient(135deg, rgba(${themeRgb},0.9), rgba(${themeRgb},0.65))`,
-                          boxShadow: `0 8px 24px -8px rgba(${themeRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.15)`,
-                        }}
-                      >
-                        <span
-                          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          style={{ background: `linear-gradient(135deg, rgba(${themeRgb},1), rgba(${themeRgb},0.75))` }}
-                        />
-                        <span className="relative flex items-center gap-2.5">
-                          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : isGuest ? <Lock className="h-4 w-4" /> : <Download className="h-4 w-4" />}
-                          {isGuest ? 'Assine para baixar' : 'Exportar post'}
-                        </span>
-                      </button>
-                    </div>
 
                     <div className="flex-1 min-h-0 overflow-y-auto sidebar-scroll">
                       {/* CARD ATUAL */}
@@ -10246,7 +10216,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 {/* ===== DESKTOP RIGHT SIDEBAR — projeto + zoom ===== */}
                 {!isMobileView && (
                   <div
-                    className="hidden md:flex flex-col w-[280px] flex-shrink-0 rounded-[20px] overflow-hidden self-center max-h-[calc(100vh-8rem)]"
+                    className="hidden md:flex flex-col w-[280px] flex-shrink-0 rounded-[20px] overflow-hidden max-h-[calc(100vh-8rem)]"
                     style={{
                       background: 'linear-gradient(180deg, rgba(8,8,12,0.55) 0%, rgba(4,4,8,0.65) 100%)',
                       border: '1px solid rgba(255,255,255,0.06)',
@@ -10345,6 +10315,24 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/60 hover:text-white hover:bg-white/[0.05] transition-all">
                           <Plus className="h-4 w-4 text-white/50" />
                           Novo carrossel
+                        </button>
+                      </div>
+
+                      {/* Export CTA */}
+                      <div className="px-4 pt-3 pb-4 border-t border-white/5 mt-2">
+                        <button
+                          onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)}
+                          disabled={exporting}
+                          className="group relative flex items-center justify-center gap-2.5 px-4 py-3 rounded-2xl text-[14px] font-semibold text-white transition-all disabled:opacity-50 w-full overflow-hidden"
+                          style={{
+                            background: `linear-gradient(135deg, rgba(${themeRgb},0.9), rgba(${themeRgb},0.65))`,
+                            boxShadow: `0 8px 24px -8px rgba(${themeRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.15)`,
+                          }}
+                        >
+                          <span className="relative flex items-center gap-2.5">
+                            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : isGuest ? <Lock className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                            {isGuest ? 'Assine para baixar' : 'Exportar post'}
+                          </span>
                         </button>
                       </div>
                     </div>

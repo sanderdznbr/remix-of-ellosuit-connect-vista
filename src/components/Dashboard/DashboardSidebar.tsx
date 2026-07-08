@@ -104,8 +104,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       return (
         <button
           onClick={onClick}
-          className="relative w-full flex items-center justify-center py-2.5 group cursor-pointer"
+          className="relative w-full flex items-center justify-center py-2.5 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
           title={label}
+          aria-label={label}
+          aria-current={active ? 'page' : undefined}
         >
           <span
             className={`absolute left-0 top-1/2 -translate-y-1/2 w-[2px] rounded-full transition-all ${

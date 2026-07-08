@@ -9882,7 +9882,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* ===== BASIC MODE: split layout on desktop, gallery on mobile ===== */}
             {resultViewMode === 'basic' && (
-              <div className="w-full flex flex-col md:flex-row md:items-stretch md:justify-between md:gap-5 items-center relative md:min-h-[calc(100vh-6rem)] md:px-5" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0' }}>
+              <div className="w-full flex flex-col md:flex-row md:items-center md:justify-between md:gap-5 items-center relative md:min-h-[calc(100vh-6rem)] md:px-5" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0' }}>
                 {!isMobileView && (
                   <div aria-hidden className="fixed inset-0 -z-10 pointer-events-none" style={{ background: 'radial-gradient(ellipse 90% 70% at 50% 40%, #060610 0%, #030308 55%, #000000 100%)' }} />
                 )}

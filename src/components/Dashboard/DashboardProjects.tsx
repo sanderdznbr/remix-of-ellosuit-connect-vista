@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2, Pencil, Check, Sparkles, X, CheckSquare } from 'lucide-react';
+import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2, Pencil, Check, Sparkles, X, CheckSquare, Calendar as CalendarIcon } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -30,6 +30,38 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [publishDialogItem, setPublishDialogItem] = useState<any | null>(null);
   const [publishCaption, setPublishCaption] = useState('');
   const [visibleCount, setVisibleCount] = useState(9);
+  const [scheduleItem, setScheduleItem] = useState<any | null>(null);
+  const [scheduleDate, setScheduleDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+
+  const openScheduleDialog = (e: React.MouseEvent, item: any) => {
+    e.stopPropagation();
+    setScheduleItem(item);
+    setScheduleDate(new Date().toISOString().slice(0, 10));
+  };
+
+  const confirmSchedule = () => {
+    if (!scheduleItem || !scheduleDate) return;
+    try {
+      const raw = localStorage.getItem('editorial_calendar_posts_v1');
+      const existing = raw ? JSON.parse(raw) : [];
+      const cover = scheduleItem.cover_url || scheduleItem.carousel_data?.cards?.[0]?.imageUrl || null;
+      const next = [
+        ...existing.filter((p: any) => p.carouselId !== scheduleItem.id),
+        {
+          id: crypto.randomUUID(),
+          date: scheduleDate,
+          carouselId: scheduleItem.id,
+          title: scheduleItem.title || scheduleItem.topic || 'Post',
+          cover,
+        },
+      ];
+      localStorage.setItem('editorial_calendar_posts_v1', JSON.stringify(next));
+      toast.success('Post vinculado ao calendário!');
+      setScheduleItem(null);
+    } catch {
+      toast.error('Erro ao vincular ao calendário');
+    }
+  };
 
   // Selection & create-style state
   const [selectionMode, setSelectionMode] = useState(false);
@@ -489,6 +521,14 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                         <span className="text-[11px]">Compartilhar</span>
                       </button>
                       <button
+                        onClick={(e) => openScheduleDialog(e, item)}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
+                        style={{ color: 'rgba(255,255,255,0.8)' }}
+                      >
+                        <CalendarIcon className="w-3.5 h-3.5" />
+                        <span className="text-[11px]">Mover para calendário</span>
+                      </button>
+                      <button
                         onClick={(e) => handleDelete(e, item.id)}
                         className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
                         style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.8)' }}
@@ -654,6 +694,35 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
               style={{ backgroundColor: '#8B5CF6', color: '#fff' }}
             >
               {creatingStyle ? <><Loader2 className="w-4 h-4 animate-spin" /> Analisando...</> : <><Sparkles className="w-4 h-4" /> Criar estilo</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Schedule to calendar dialog */}
+      <Dialog open={!!scheduleItem} onOpenChange={(o) => !o && setScheduleItem(null)}>
+        <DialogContent style={{ backgroundColor: '#0f0f15', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}>
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4 text-purple-400" /> Mover para o calendário
+            </DialogTitle>
+            <DialogDescription style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Escolha a data em que este post será publicado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <input
+              type="date"
+              value={scheduleDate}
+              onChange={(e) => setScheduleDate(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg text-sm"
+              style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', colorScheme: 'dark' }}
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setScheduleItem(null)} style={{ color: 'rgba(255,255,255,0.5)' }}>Cancelar</Button>
+            <Button onClick={confirmSchedule} disabled={!scheduleDate} className="gap-2" style={{ backgroundColor: '#8B5CF6', color: '#fff' }}>
+              <CalendarIcon className="w-4 h-4" /> Vincular à data
             </Button>
           </DialogFooter>
         </DialogContent>

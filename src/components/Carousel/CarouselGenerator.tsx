@@ -9886,188 +9886,207 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                 {/* ===== DESKTOP SIDEBAR — always visible on md+ ===== */}
                 {!isMobileView && (
-                  <div className="hidden md:flex flex-col w-[300px] flex-shrink-0 rounded-2xl overflow-hidden sticky top-20 max-h-[85vh] overflow-y-auto"
-                    style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    
-                    {/* Auto-save */}
-                    <div className="flex items-center gap-2 px-4 py-3 text-xs font-medium text-white/40 border-b border-white/[0.05]">
-                      {autoSaveStatus === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Save className="h-3.5 w-3.5" />}
-                      {autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : 'Auto-save'}
-                    </div>
-
-                    {/* Export */}
-                    <div className="px-3 pt-3 pb-1">
-                      <button onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] font-medium text-white border transition-all disabled:opacity-50 w-full"
-                        style={{ borderColor: `rgba(${themeRgb},0.3)`, background: `linear-gradient(135deg, rgba(${themeRgb},0.12), rgba(${themeRgb},0.04))` }}>
-                        {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : isGuest ? <Lock className="h-4 w-4" /> : <Download className="h-4 w-4" style={{ color: themeHex }} />}
-                        {isGuest ? 'Assine para baixar' : 'Exportar'}
-                      </button>
-                    </div>
-
-                    <div className="mx-3 h-px bg-white/[0.05]" />
-
-                    {/* Card-specific section */}
-                    {!isGuest && carouselData.cards.length > 0 && (
-                      <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/30">
-                        Card {activeCardIndex + 1} de {carouselData.cards.length}
-                      </p>
-                    )}
-
-                    <div className="px-3 pb-1 space-y-0.5">
-                      {!isGuest && (
-                        <button onClick={() => setRegenDialogCard(activeCardIndex)}
-                          disabled={regeneratingCard === activeCardIndex}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
-                          {regeneratingCard === activeCardIndex ? <Loader2 className="h-4 w-4 animate-spin text-sky-400" /> : <Wand2 className="h-4 w-4 text-sky-400" />}
-                          Regenerar foto
-                        </button>
-                      )}
-                      {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
-                        <button onClick={() => setCorrectionCardIndex(activeCardIndex)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
-                          <Pencil className="h-4 w-4 text-orange-400" />
-                          Corrigir região
-                        </button>
-                      )}
-                      {!isGuest && (
-                        <button onClick={handleUndoEdit}
-                          disabled={correctionUndoStack.length === 0}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
-                          <Undo2 className="h-4 w-4 text-yellow-400" />
-                          Voltar edição
-                          {correctionUndoStack.length > 0 && <span className="ml-auto text-[10px] text-yellow-400/60">({correctionUndoStack.length})</span>}
-                        </button>
-                      )}
-                      {!isGuest && (
-                        <button onClick={handleRedoEdit}
-                          disabled={correctionRedoStack.length === 0}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
-                          <Redo2 className="h-4 w-4 text-blue-400" />
-                          Avançar edição
-                          {correctionRedoStack.length > 0 && <span className="ml-auto text-[10px] text-blue-400/60">({correctionRedoStack.length})</span>}
-                        </button>
-                      )}
-                      {!isGuest && carouselData.cards.length > 1 && (
-                        <button onClick={() => {
-                          const newCards = carouselData.cards.filter((_, idx) => idx !== activeCardIndex);
-                          setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
-                          if (activeCardIndex >= newCards.length) setActiveCardIndex(newCards.length - 1);
+                  <div
+                    className="hidden md:flex flex-col w-[300px] flex-shrink-0 rounded-[20px] overflow-hidden sticky top-20 max-h-[85vh]"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(20,20,28,0.85) 0%, rgba(14,14,20,0.9) 100%)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      backdropFilter: 'blur(24px)',
+                      WebkitBackdropFilter: 'blur(24px)',
+                      boxShadow: '0 20px 60px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
+                    }}
+                  >
+                    {/* Header row: title + autosave chip */}
+                    <div className="flex items-center justify-between px-5 pt-4 pb-3">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Estúdio</span>
+                        <span className="text-[13px] font-medium text-white/85 mt-0.5">Edição do post</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium"
+                        style={{
+                          backgroundColor: autoSaveStatus === 'saved' ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.04)',
+                          color: autoSaveStatus === 'saved' ? '#4ade80' : 'rgba(255,255,255,0.4)',
                         }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-all">
-                          <Trash2 className="h-4 w-4" />
-                          Excluir card
-                        </button>
-                      )}
+                      >
+                        {autoSaveStatus === 'saving'
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : autoSaveStatus === 'saved'
+                            ? <Check className="h-3 w-3" />
+                            : <Save className="h-3 w-3" />}
+                        {autoSaveStatus === 'saving' ? 'Salvando' : autoSaveStatus === 'saved' ? 'Salvo' : 'Auto'}
+                      </div>
                     </div>
 
-                    <div className="mx-3 h-px bg-white/[0.05]" />
-
-                    {/* Global actions */}
-                    <div className="px-3 py-1 space-y-0.5">
-                      <button onClick={() => { setStyleChangeSource('recreate'); setShowStylePanel(true); }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
-                        <Repeat2 className="h-4 w-4 text-emerald-400" />
-                        Recriar carrossel
-                      </button>
-                      {carouselData.cards.length >= 2 && !isGuest && (
-                        <button onClick={() => { setContinuousMode(false); regenerateAll(); }}
-                          disabled={regeneratingAll || regeneratingCard !== null}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
-                          <img src={toolRegenAllIcon} alt="" className="w-6 h-6 object-contain" loading="lazy" />
-                          Regenerar todas
-                        </button>
-                      )}
-                      {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
-                        <button onClick={() => setShowAddCardMenu(true)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
-                          <Plus className="h-4 w-4" />
-                          Adicionar card
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="mx-3 h-px bg-white/[0.05]" />
-
-                    {/* Style */}
-                    <div className="px-3 py-1">
-                      <button onClick={() => setShowFullScreenStylePicker(true)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
-                        <Palette className="h-4 w-4" />
-                        Mudar estilo
+                    {/* Hero Export CTA */}
+                    <div className="px-4 pb-4">
+                      <button
+                        onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)}
+                        disabled={exporting}
+                        className="group relative flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl text-[14px] font-semibold text-white transition-all disabled:opacity-50 w-full overflow-hidden"
+                        style={{
+                          background: `linear-gradient(135deg, rgba(${themeRgb},0.9), rgba(${themeRgb},0.65))`,
+                          boxShadow: `0 8px 24px -8px rgba(${themeRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.15)`,
+                        }}
+                      >
+                        <span
+                          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ background: `linear-gradient(135deg, rgba(${themeRgb},1), rgba(${themeRgb},0.75))` }}
+                        />
+                        <span className="relative flex items-center gap-2.5">
+                          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : isGuest ? <Lock className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                          {isGuest ? 'Assine para baixar' : 'Exportar post'}
+                        </span>
                       </button>
                     </div>
 
-                    {/* Logo reposition */}
-                    {logoUrl && carouselData.cards.some(c => c.imageUrlRaw) && !isGuest && (
-                      <div className="px-3 py-1">
-                        <button onClick={() => setShowLogoRepositionPanel(prev => !prev)}
-                          disabled={repositioningLogo}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
-                          {repositioningLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Move className="h-4 w-4" />}
-                          Reposicionar logo
-                        </button>
-                        {showLogoRepositionPanel && (
-                          <div className="px-2 pb-3 pt-1">
-                            <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={(pos) => repositionLogo(pos)} />
+                    <div className="flex-1 min-h-0 overflow-y-auto sidebar-scroll">
+                      {/* CARD ATUAL */}
+                      {!isGuest && carouselData.cards.length > 0 && (
+                        <>
+                          <div className="flex items-center justify-between px-5 pt-2 pb-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Card atual</span>
+                            <span className="text-[10px] font-medium text-white/40">{activeCardIndex + 1} / {carouselData.cards.length}</span>
                           </div>
-                        )}
-                      </div>
-                    )}
 
-                    {/* Font change */}
-                    {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
-                      <div className="px-3 py-1">
-                        <button onClick={() => setShowFontChangePanel(prev => !prev)}
-                          disabled={changingFont}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
-                          {changingFont ? <Loader2 className="h-4 w-4 animate-spin" /> : <Type className="h-4 w-4" />}
-                          Mudar fonte
-                        </button>
-                        {showFontChangePanel && (
-                          <div className="px-1 pb-3 pt-2">
-                            <FontChangePicker
-                              onSelectFont={(name, previewUrl) => changeCardFont(name, previewUrl)}
-                              loading={changingFont}
-                            />
+                          <div className="px-3 pb-2 space-y-0.5">
+                            <button onClick={() => setRegenDialogCard(activeCardIndex)}
+                              disabled={regeneratingCard === activeCardIndex}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
+                              {regeneratingCard === activeCardIndex ? <Loader2 className="h-4 w-4 animate-spin text-sky-400" /> : <Wand2 className="h-4 w-4 text-sky-400" />}
+                              Regenerar foto
+                            </button>
+                            {carouselData.cards[activeCardIndex]?.imageUrl && (
+                              <button onClick={() => setCorrectionCardIndex(activeCardIndex)}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                                <Pencil className="h-4 w-4 text-orange-400" />
+                                Corrigir região
+                              </button>
+                            )}
+                            {carouselData.cards[activeCardIndex]?.imageUrl && (
+                              <button onClick={upscaleCard}
+                                disabled={upscaling}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
+                                {upscaling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-fuchsia-400" />}
+                                Melhorar qualidade
+                              </button>
+                            )}
+                            {carouselData.cards[activeCardIndex]?.imageUrl && (
+                              <button onClick={() => setShowFontChangePanel(prev => !prev)}
+                                disabled={changingFont}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
+                                {changingFont ? <Loader2 className="h-4 w-4 animate-spin" /> : <Type className="h-4 w-4 text-amber-400" />}
+                                Mudar fonte
+                              </button>
+                            )}
+                            {showFontChangePanel && !isGuest && (
+                              <div className="px-1 pb-2 pt-1">
+                                <FontChangePicker
+                                  onSelectFont={(name, previewUrl) => changeCardFont(name, previewUrl)}
+                                  loading={changingFont}
+                                />
+                              </div>
+                            )}
+
+                            {/* Undo / Redo pair */}
+                            <div className="flex items-center gap-1.5 pt-1">
+                              <button onClick={handleUndoEdit}
+                                disabled={correctionUndoStack.length === 0}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-30">
+                                <Undo2 className="h-3.5 w-3.5" />
+                                Voltar
+                                {correctionUndoStack.length > 0 && <span className="text-[10px] opacity-60">({correctionUndoStack.length})</span>}
+                              </button>
+                              <button onClick={handleRedoEdit}
+                                disabled={correctionRedoStack.length === 0}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[12px] text-white/60 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-30">
+                                <Redo2 className="h-3.5 w-3.5" />
+                                Refazer
+                                {correctionRedoStack.length > 0 && <span className="text-[10px] opacity-60">({correctionRedoStack.length})</span>}
+                              </button>
+                            </div>
+
+                            {carouselData.cards.length > 1 && (
+                              <button onClick={() => {
+                                const newCards = carouselData.cards.filter((_, idx) => idx !== activeCardIndex);
+                                setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                                if (activeCardIndex >= newCards.length) setActiveCardIndex(newCards.length - 1);
+                              }}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-red-400/70 hover:text-red-300 hover:bg-red-500/[0.06] transition-all mt-1">
+                                <Trash2 className="h-4 w-4" />
+                                Excluir card
+                              </button>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    )}
 
-                    {/* Upscale */}
-                    {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
-                      <div className="px-3 py-1">
-                        <button onClick={upscaleCard}
-                          disabled={upscaling}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
-                          {upscaling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                          Melhorar qualidade
+                          <div className="mx-4 h-px bg-white/[0.05] my-1" />
+                        </>
+                      )}
+
+                      {/* PROJETO */}
+                      <div className="flex items-center px-5 pt-2 pb-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Projeto</span>
+                      </div>
+                      <div className="px-3 pb-2 space-y-0.5">
+                        <button onClick={() => { setStyleChangeSource('recreate'); setShowStylePanel(true); }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <Repeat2 className="h-4 w-4 text-emerald-400" />
+                          Recriar carrossel
+                        </button>
+                        {carouselData.cards.length >= 2 && !isGuest && (
+                          <button onClick={() => { setContinuousMode(false); regenerateAll(); }}
+                            disabled={regeneratingAll || regeneratingCard !== null}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
+                            <img src={toolRegenAllIcon} alt="" className="w-5 h-5 object-contain" loading="lazy" />
+                            Regenerar todas
+                          </button>
+                        )}
+                        {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
+                          <button onClick={() => setShowAddCardMenu(true)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                            <Plus className="h-4 w-4 text-white/60" />
+                            Adicionar card
+                          </button>
+                        )}
+                        <button onClick={() => setShowFullScreenStylePicker(true)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <Palette className="h-4 w-4 text-violet-400" />
+                          Mudar estilo
+                        </button>
+                        {logoUrl && carouselData.cards.some(c => c.imageUrlRaw) && !isGuest && (
+                          <>
+                            <button onClick={() => setShowLogoRepositionPanel(prev => !prev)}
+                              disabled={repositioningLogo}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
+                              {repositioningLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Move className="h-4 w-4 text-cyan-400" />}
+                              Reposicionar logo
+                            </button>
+                            {showLogoRepositionPanel && (
+                              <div className="px-2 pb-3 pt-1">
+                                <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={(pos) => repositionLogo(pos)} />
+                              </div>
+                            )}
+                          </>
+                        )}
+                        <button onClick={() => { if (!postCaption) { openCaptionConfigDialog(); } else { setShowCaptionPanel(true); } }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <FileText className="h-4 w-4 text-white/60" />
+                          Legenda
                         </button>
                       </div>
-                    )}
 
-                    <div className="mx-3 h-px bg-white/[0.05]" />
+                      <div className="mx-4 h-px bg-white/[0.05] my-1" />
 
-                    {/* Caption */}
-                    <div className="px-3 py-2">
-                      <button onClick={() => { if (!postCaption) { openCaptionConfigDialog(); } else { setShowCaptionPanel(true); } }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
-                        <FileText className="h-4 w-4" />
-                        Legenda
-                      </button>
+                      <div className="px-3 py-3">
+                        <button onClick={() => resetWizardState()}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium text-white/45 hover:text-white/80 hover:bg-white/[0.04] border border-white/[0.05] hover:border-white/[0.12] transition-all">
+                          <Plus className="h-3.5 w-3.5" />
+                          Novo carrossel
+                        </button>
+                      </div>
                     </div>
+                  </div>
 
-                    <div className="mx-3 h-px bg-white/[0.05]" />
-
-                    {/* New carousel */}
-                    <div className="px-3 py-2 pb-4">
-                      <button onClick={() => resetWizardState()}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all">
-                        <Plus className="h-4 w-4" />
-                        Novo carrossel
-                      </button>
-                    </div>
                   </div>
                 )}
 

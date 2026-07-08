@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Paperclip, Wand2, Loader2, RotateCcw, Sparkles, Image as ImageIcon, Type, Zap } from 'lucide-react';
+import { X, Send, Paperclip, Loader2, RotateCcw, Type } from 'lucide-react';
 
 type ChatMsg =
   | { id: string; role: 'assistant'; kind: 'text'; content: string }
@@ -124,105 +124,63 @@ export const AddCardChatModal = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Ambient glow */}
-          <div
-            className="absolute -top-20 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full pointer-events-none opacity-30"
-            style={{ background: `radial-gradient(circle, rgba(${themeRgb},0.5), transparent 70%)`, filter: 'blur(60px)' }}
-          />
+
+
 
           {/* Header */}
-          <div className="relative flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-            <div className="flex items-center gap-3">
-              <div className="relative h-10 w-10 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.9), rgba(${themeRgb2},0.7))`, boxShadow: `0 0 24px rgba(${themeRgb},0.5)` }}>
-                <Sparkles className="h-4 w-4 text-white" />
-                <span className="absolute inset-0 rounded-full animate-ping" style={{ backgroundColor: `rgba(${themeRgb},0.3)` }} />
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Assistente de card</p>
-                <p className="text-white font-semibold text-[15px] leading-tight">Novo card — vamos conversar</p>
-              </div>
+          <div className="relative flex items-center justify-between px-6 py-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">Novo card</p>
+              <p className="text-white font-semibold text-[16px] leading-tight mt-1">Vamos conversar</p>
             </div>
-            <button onClick={onClose} className="h-9 w-9 rounded-full hover:bg-white/[0.06] flex items-center justify-center transition-colors">
-              <X className="h-4 w-4 text-white/50" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => send(true)}
+                disabled={generating}
+                className="px-3.5 py-1.5 rounded-full text-[11px] font-medium transition-all disabled:opacity-40 hover:bg-white/[0.05]"
+                style={{ color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)' }}
+              >
+                Criar automaticamente
+              </button>
+              <button onClick={onClose} className="h-9 w-9 rounded-full hover:bg-white/[0.06] flex items-center justify-center transition-colors">
+                <X className="h-4 w-4 text-white/50" />
+              </button>
+            </div>
           </div>
 
-          {/* Quick controls */}
-          <div className="px-5 py-3 flex items-center gap-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Tamanho</span>
-            <div className="flex gap-1">
-              {(['short', 'medium', 'long'] as const).map(v => (
-                <button
-                  key={v}
-                  onClick={() => onTextSizeChange(v)}
-                  className="px-3 py-1 rounded-full text-[11px] font-medium transition-all"
-                  style={{
-                    backgroundColor: textSize === v ? `rgba(${themeRgb},0.18)` : 'rgba(255,255,255,0.03)',
-                    color: textSize === v ? themeHex : 'rgba(255,255,255,0.5)',
-                    border: `1px solid ${textSize === v ? `rgba(${themeRgb},0.4)` : 'rgba(255,255,255,0.06)'}`,
-                  }}
-                >
-                  {v === 'short' ? 'Curto' : v === 'medium' ? 'Médio' : 'Longo'}
-                </button>
-              ))}
-            </div>
-            <div className="flex-1" />
-            <button
-              onClick={() => send(true)}
-              disabled={generating}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all disabled:opacity-40"
-              style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.25), rgba(${themeRgb2},0.15))`, border: `1px solid rgba(${themeRgb},0.35)`, color: themeHex }}
-            >
-              <Zap className="h-3 w-3" />
-              Criar automaticamente
-            </button>
-          </div>
 
           {/* Messages */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-6 space-y-4">
             {messages.map(m => (
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {m.role === 'assistant' && m.kind === 'text' && (
-                  <div className="flex gap-3 max-w-[85%]">
-                    <div className="h-7 w-7 rounded-full flex-shrink-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.9), rgba(${themeRgb2},0.7))` }}>
-                      <Sparkles className="h-3 w-3 text-white" />
-                    </div>
-                    <div className="rounded-2xl rounded-tl-sm px-4 py-3 text-[13.5px] leading-relaxed text-white/85" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                      {m.content.split('**').map((chunk, i) => i % 2 === 0 ? chunk : <strong key={i} className="text-white">{chunk}</strong>)}
-                    </div>
+                  <div className="max-w-[90%] text-[14px] leading-relaxed text-white/80">
+                    {m.content.split('**').map((chunk, i) => i % 2 === 0 ? chunk : <strong key={i} className="text-white">{chunk}</strong>)}
                   </div>
                 )}
 
                 {m.role === 'assistant' && m.kind === 'suggestion' && (
-                  <div className="flex gap-3 max-w-[90%]">
-                    <div className="h-7 w-7 rounded-full flex-shrink-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.9), rgba(${themeRgb2},0.7))` }}>
-                      <Wand2 className="h-3 w-3 text-white" />
+                  <div className="max-w-[90%] w-full rounded-2xl p-5 space-y-4" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="space-y-2">
+                      <p className="text-white font-semibold text-[15px] leading-snug">{m.title}</p>
+                      {m.body && <p className="text-white/55 text-[13px] leading-relaxed">{m.body}</p>}
                     </div>
-                    <div className="rounded-2xl rounded-tl-sm p-4 space-y-3" style={{ backgroundColor: `rgba(${themeRgb},0.06)`, border: `1px solid rgba(${themeRgb},0.2)` }}>
-                      <p className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: themeHex }}>Sugestão de conteúdo</p>
-                      <div className="space-y-2">
-                        <p className="text-white font-semibold text-[15px] leading-snug">{m.title}</p>
-                        {m.body && <p className="text-white/60 text-[13px] leading-relaxed">{m.body}</p>}
-                      </div>
-                      <div className="flex gap-2 pt-1">
-                        <button
-                          onClick={() => generate(input.trim() || 'Gere outra variação com ângulo diferente', attachments)}
-                          disabled={generating}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium text-white/70 hover:text-white transition-colors disabled:opacity-40"
-                          style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
-                        >
-                          {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
-                          Outra ideia
-                        </button>
-                        <button
-                          onClick={() => onApprove({ title: m.title, body: m.body }, attachments)}
-                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold text-white transition-all hover:opacity-90"
-                          style={{ background: `linear-gradient(135deg, rgba(${themeRgb},1), rgba(${themeRgb2},0.9))`, boxShadow: `0 4px 16px -4px rgba(${themeRgb},0.6)` }}
-                        >
-                          <Sparkles className="h-3 w-3" />
-                          Aprovar e gerar card
-                        </button>
-                      </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => generate(input.trim() || 'Gere outra variação com ângulo diferente', attachments)}
+                        disabled={generating}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors disabled:opacity-40"
+                      >
+                        {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+                        Outra ideia
+                      </button>
+                      <button
+                        onClick={() => onApprove({ title: m.title, body: m.body }, attachments)}
+                        className="flex-1 px-3 py-2 rounded-lg text-[12px] font-semibold text-white transition-all hover:opacity-90"
+                        style={{ backgroundColor: `rgba(${themeRgb},0.9)` }}
+                      >
+                        Aprovar e gerar card
+                      </button>
                     </div>
                   </div>
                 )}
@@ -237,7 +195,7 @@ export const AddCardChatModal = ({
                       </div>
                     )}
                     {m.content && (
-                      <div className="rounded-2xl rounded-tr-sm px-4 py-3 text-[13.5px] leading-relaxed text-white ml-auto" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.9), rgba(${themeRgb2},0.75))` }}>
+                      <div className="rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed text-white/90 ml-auto" style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
                         {m.content}
                       </div>
                     )}
@@ -246,18 +204,13 @@ export const AddCardChatModal = ({
               </div>
             ))}
             {generating && (
-              <div className="flex gap-3">
-                <div className="h-7 w-7 rounded-full flex-shrink-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.9), rgba(${themeRgb2},0.7))` }}>
-                  <Sparkles className="h-3 w-3 text-white" />
-                </div>
-                <div className="rounded-2xl rounded-tl-sm px-4 py-3.5 flex items-center gap-2" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <span className="h-1.5 w-1.5 rounded-full animate-bounce" style={{ backgroundColor: themeHex, animationDelay: '0ms' }} />
-                  <span className="h-1.5 w-1.5 rounded-full animate-bounce" style={{ backgroundColor: themeHex, animationDelay: '150ms' }} />
-                  <span className="h-1.5 w-1.5 rounded-full animate-bounce" style={{ backgroundColor: themeHex, animationDelay: '300ms' }} />
-                </div>
+              <div className="flex items-center gap-2 text-white/40 text-[12px]">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Pensando...
               </div>
             )}
           </div>
+
 
           {/* Attachments preview */}
           {attachments.length > 0 && (

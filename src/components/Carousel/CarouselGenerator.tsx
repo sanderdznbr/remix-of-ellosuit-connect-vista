@@ -10026,60 +10026,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         </>
                       )}
 
-                      {/* PROJETO */}
-                      <div className="flex items-center px-5 pt-2 pb-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Projeto</span>
-                      </div>
-                      <div className="px-3 pb-2 space-y-0.5">
-                        <button onClick={() => { setStyleChangeSource('recreate'); setShowStylePanel(true); }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
-                          <Repeat2 className="h-4 w-4 text-emerald-400" />
-                          Recriar carrossel
-                        </button>
-                        {carouselData.cards.length >= 2 && !isGuest && (
-                          <button onClick={() => { setContinuousMode(false); regenerateAll(); }}
-                            disabled={regeneratingAll || regeneratingCard !== null}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
-                            <img src={toolRegenAllIcon} alt="" className="w-5 h-5 object-contain" loading="lazy" />
-                            Regenerar todas
-                          </button>
-                        )}
-                        {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
-                          <button onClick={() => setShowAddCardMenu(true)}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
-                            <Plus className="h-4 w-4 text-white/60" />
-                            Adicionar card
-                          </button>
-                        )}
-                        <button onClick={() => setShowFullScreenStylePicker(true)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
-                          <Palette className="h-4 w-4 text-violet-400" />
-                          Mudar estilo
-                        </button>
-                        {logoUrl && carouselData.cards.some(c => c.imageUrlRaw) && !isGuest && (
-                          <>
-                            <button onClick={() => setShowLogoRepositionPanel(prev => !prev)}
-                              disabled={repositioningLogo}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
-                              {repositioningLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Move className="h-4 w-4 text-cyan-400" />}
-                              Reposicionar logo
-                            </button>
-                            {showLogoRepositionPanel && (
-                              <div className="px-2 pb-3 pt-1">
-                                <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={(pos) => repositionLogo(pos)} />
-                              </div>
-                            )}
-                          </>
-                        )}
-                        <button onClick={() => { if (!postCaption) { openCaptionConfigDialog(); } else { setShowCaptionPanel(true); } }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
-                          <FileText className="h-4 w-4 text-white/60" />
-                          Legenda
-                        </button>
-                      </div>
-
-                      <div className="mx-4 h-px bg-white/[0.05] my-1" />
-
                       <div className="px-3 py-3">
                         <button onClick={() => resetWizardState()}
                           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium text-white/45 hover:text-white/80 hover:bg-white/[0.04] border border-white/[0.05] hover:border-white/[0.12] transition-all">

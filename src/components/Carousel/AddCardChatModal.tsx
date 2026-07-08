@@ -124,11 +124,8 @@ export const AddCardChatModal = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Ambient glow */}
-          <div
-            className="absolute -top-20 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full pointer-events-none opacity-30"
-            style={{ background: `radial-gradient(circle, rgba(${themeRgb},0.5), transparent 70%)`, filter: 'blur(60px)' }}
-          />
+
+
 
           {/* Header */}
           <div className="relative flex items-center justify-between px-6 py-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>

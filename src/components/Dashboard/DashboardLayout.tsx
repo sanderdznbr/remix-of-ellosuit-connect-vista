@@ -189,15 +189,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
                 onClick={() => setProfileOpen(false)}
               />
               <motion.div
-                className="fixed left-0 right-0 rounded-t-2xl border-t border-x border-white/[0.08] shadow-2xl z-50 overflow-hidden"
-                style={{ backgroundColor: '#111116', bottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))' }}
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="fixed top-0 right-0 bottom-0 w-[86%] max-w-[380px] border-l border-white/[0.08] shadow-2xl z-50 overflow-y-auto"
+                style={{ backgroundColor: '#111116', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))' }}
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
-                <div className="px-4 py-3 border-b border-white/[0.06]">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
                   <p className="text-sm text-white/70 font-medium truncate">{email}</p>
+                  <button onClick={() => setProfileOpen(false)} className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
                 <div className="py-1">
                   {(() => {

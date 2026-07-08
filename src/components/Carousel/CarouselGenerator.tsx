@@ -10051,15 +10051,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         )}
                       </div>
 
-                      <div className="mx-4 h-px bg-white/[0.05] my-1" />
-
-                      <div className="px-3 py-3">
-                        <button onClick={() => resetWizardState()}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium text-white/45 hover:text-white/80 hover:bg-white/[0.04] border border-white/[0.05] hover:border-white/[0.12] transition-all">
-                          <Plus className="h-3.5 w-3.5" />
-                          Novo carrossel
-                        </button>
-                      </div>
                     </div>
                   </div>
                 )}
@@ -10203,6 +10194,24 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </button>
                     );
                   })}
+                  {!isGuest && !activeMarketplaceStyle?.imageGeneration?.prompt_style && (() => {
+                    const thumbW = 48;
+                    const thumbH = thumbW * (cardH / cardW);
+                    return (
+                      <button
+                        onClick={() => setShowAddCardMenu(true)}
+                        className="flex-shrink-0 rounded-lg flex items-center justify-center transition-all hover:bg-white/[0.06]"
+                        style={{
+                          width: thumbW,
+                          height: thumbH,
+                          border: `2px dashed rgba(255,255,255,0.2)`,
+                        }}
+                        aria-label="Adicionar card"
+                      >
+                        <Plus className="w-4 h-4 text-white/50" />
+                      </button>
+                    );
+                  })()}
                 </div>
 
                 {/* Card counter */}
@@ -10310,12 +10319,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             Copiar legenda
                           </button>
                         )}
-                        <button
-                          onClick={() => resetWizardState()}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/60 hover:text-white hover:bg-white/[0.05] transition-all">
-                          <Plus className="h-4 w-4 text-white/50" />
-                          Novo carrossel
-                        </button>
                       </div>
                     </div>
 

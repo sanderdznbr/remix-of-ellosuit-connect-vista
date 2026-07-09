@@ -221,7 +221,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── BENTO — Estilos ─────────── */}
-      <section id="estilos" className="relative py-32 md:py-40 px-6">
+      <section id="estilos" className="relative py-20 md:py-28 px-6">
         <div className="max-w-[1240px] mx-auto">
           <div className="flex items-end justify-between mb-14 flex-wrap gap-6">
             <div>
@@ -259,7 +259,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── COMO FUNCIONA ─────────── */}
-      <section id="como" className="relative py-32 md:py-40 px-6" style={{ background: 'linear-gradient(180deg, transparent, rgba(139,92,246,0.03), transparent)' }}>
+      <section id="como" className="relative py-20 md:py-28 px-6" style={{ background: 'linear-gradient(180deg, transparent, rgba(139,92,246,0.03), transparent)' }}>
         <div className="max-w-[1100px] mx-auto">
           <div className="text-center mb-20">
             <div className="text-[11px] uppercase tracking-[0.3em] mb-4" style={{ color: '#A78BFA' }}>Como funciona</div>
@@ -292,7 +292,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── SHOWCASE MARQUEE ─────────── */}
-      <section id="showcase" className="relative py-32 md:py-40 overflow-hidden">
+      <section id="showcase" className="relative py-20 md:py-28 overflow-hidden">
         <div className="max-w-[1240px] mx-auto px-6 mb-16 flex items-end justify-between flex-wrap gap-6">
           <div>
             <div className="text-[11px] uppercase tracking-[0.3em] mb-4" style={{ color: '#A78BFA' }}>Feito com ellocontent</div>
@@ -326,7 +326,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── QUOTE ─────────── */}
-      <section className="relative py-32 md:py-44 px-6">
+      <section className="relative py-24 md:py-32 px-6">
         <div className="max-w-[900px] mx-auto text-center">
           <div className="text-[11px] uppercase tracking-[0.3em] mb-8" style={{ color: 'rgba(236,234,244,0.4)' }}>—  Depoimento</div>
           <blockquote style={{ fontFamily: SERIF, fontWeight: 300, fontStyle: 'italic', fontSize: 'clamp(1.6rem, 3.5vw, 2.75rem)', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
@@ -343,7 +343,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── PRICING ─────────── */}
-      <section className="relative py-32 md:py-40 px-6">
+      <section className="relative py-20 md:py-28 px-6">
         <div className="max-w-[1100px] mx-auto">
           <div className="text-center mb-16">
             <div className="text-[11px] uppercase tracking-[0.3em] mb-4" style={{ color: '#A78BFA' }}>Preços</div>
@@ -399,7 +399,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── FAQ ─────────── */}
-      <section className="relative py-32 md:py-40 px-6">
+      <section className="relative py-20 md:py-28 px-6">
         <div className="max-w-[820px] mx-auto">
           <div className="text-center mb-16">
             <div className="text-[11px] uppercase tracking-[0.3em] mb-4" style={{ color: '#A78BFA' }}>FAQ</div>
@@ -432,7 +432,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── CTA FINAL ─────────── */}
-      <section className="relative py-32 md:py-44 px-6">
+      <section className="relative py-24 md:py-32 px-6">
         <div className="max-w-[1000px] mx-auto rounded-[36px] relative overflow-hidden p-12 md:p-20 text-center"
           style={{
             border: '1px solid rgba(139,92,246,0.25)',

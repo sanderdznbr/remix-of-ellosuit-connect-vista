@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform, useSpring, useMotionValueEvent } from 'framer-motion';
 import { ArrowUpRight, Plus, Minus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
+
+const HeroCanvas = lazy(() => import('@/components/landing/HeroCanvas'));
 
 /* ─────────────────────────────────────────────────────────────
    ellocontent — Landing · Asymmetric Marquee (Editorial Noir)

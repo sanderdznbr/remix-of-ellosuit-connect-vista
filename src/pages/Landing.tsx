@@ -208,8 +208,8 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ESTILOS */}
-      <section id="estilos" className="relative py-24 md:py-32 px-6 md:px-10">
-        <div className="max-w-[1400px] mx-auto">
+      <section id="estilos" className="relative py-24 md:py-32 overflow-hidden">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-10">
           <div className="flex items-end justify-between mb-14 flex-wrap gap-6">
             <div>
               <div className="text-[11px] uppercase tracking-[0.25em] mb-4 font-semibold" style={{ color: '#A78BFA' }}>Sistema visual</div>
@@ -222,22 +222,32 @@ const Landing: React.FC = () => {
               Do editorial minimalista ao streetwear vibrante. Cada preset traz tipografia, paleta e ritmo próprios.
             </p>
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            {styles.slice(0, 8).map((s, i) => (
-              <StyleCard key={s.id} src={s.preview_images[0]} name={s.name} tag={s.category} featured={i === 0} />
+        <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10"
+               style={{ background: 'linear-gradient(90deg, #0A0A0F, transparent)' }} />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10"
+               style={{ background: 'linear-gradient(-90deg, #0A0A0F, transparent)' }} />
+          <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory px-6 md:px-10 pb-2">
+            {styles.map((s) => (
+              <div key={s.id} className="shrink-0 w-[240px] md:w-[300px] snap-start">
+                <StyleCard src={s.preview_images[0]} name={s.name} tag={s.category} />
+              </div>
             ))}
           </div>
+        </div>
 
-          <div className="mt-12 flex justify-center">
-            <button onClick={goCreate}
-                    className="text-[13px] font-semibold flex items-center gap-1.5 px-6 py-3 rounded-full border transition-colors hover:bg-white/5"
-                    style={{ borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(245,245,247,0.9)' }}>
-              Ver todos os estilos <ArrowUpRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+        <div className="mt-12 flex justify-center">
+          <button onClick={goCreate}
+                  className="text-[13px] font-semibold flex items-center gap-1.5 px-6 py-3 rounded-full border transition-colors hover:bg-white/5"
+                  style={{ borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(245,245,247,0.9)' }}>
+            Ver todos os estilos <ArrowUpRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       </section>
+
+
 
       {/* COMO FUNCIONA */}
       <section id="como" className="relative py-24 md:py-32 px-6 md:px-10"

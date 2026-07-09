@@ -173,23 +173,6 @@ const Landing: React.FC = () => {
             Grátis para começar · sem cartão · 1 post cortesia
           </p>
 
-          {/* Preview strip */}
-          <div className="relative mt-20 md:mt-24">
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10"
-                 style={{ background: 'linear-gradient(90deg, #0A0A0F, transparent)' }} />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10"
-                 style={{ background: 'linear-gradient(-90deg, #0A0A0F, transparent)' }} />
-            <div className="flex gap-4 overflow-hidden">
-              <div className="flex gap-4 shrink-0 ec-marquee-left">
-                {[...heroTiles, ...heroTiles].map((t, i) => (
-                  <div key={i} className="shrink-0 w-[180px] md:w-[220px] aspect-[4/5] rounded-2xl overflow-hidden relative"
-                       style={{ background: '#14141C', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    {t.src && <img src={t.src} alt="" loading="lazy" className="w-full h-full object-cover" style={{ objectPosition: 'center top' }} />}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 

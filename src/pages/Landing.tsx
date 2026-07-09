@@ -214,8 +214,8 @@ const Landing: React.FC = () => {
             <div>
               <div className="text-[11px] uppercase tracking-[0.25em] mb-4 font-semibold" style={{ color: '#A78BFA' }}>Sistema visual</div>
               <h2 style={{ ...DISPLAY, fontSize: 'clamp(2.25rem, 5.5vw, 4.5rem)' }}>
-                400+ estilos.<br />
-                <span style={{ color: '#A78BFA' }}>Um ponto de vista.</span>
+                Crie posts<br />
+                <span style={{ color: '#A78BFA' }}>como esses.</span>
               </h2>
             </div>
             <p className="max-w-sm text-[15px] leading-relaxed" style={{ color: 'rgba(245,245,247,0.55)' }}>

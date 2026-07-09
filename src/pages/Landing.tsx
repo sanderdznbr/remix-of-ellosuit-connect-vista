@@ -123,14 +123,16 @@ const Landing: React.FC = () => {
       </header>
 
       {/* HERO */}
-      <section className="relative pt-32 md:pt-40 pb-24 md:pb-32 px-6 md:px-10 overflow-hidden">
-        {/* Ambient glow */}
+      <section className="relative pt-36 md:pt-48 pb-28 md:pb-40 px-6 md:px-10 overflow-hidden">
+        {/* Ambient */}
         <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-          <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[900px] h-[900px] rounded-full"
-               style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.18), transparent 60%)', filter: 'blur(80px)' }} />
-          <div className="absolute inset-0 opacity-[0.08]" style={{
+          <div className="absolute top-[-25%] left-1/2 -translate-x-1/2 w-[1100px] h-[1100px] rounded-full"
+               style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.22), transparent 60%)', filter: 'blur(90px)' }} />
+          <div className="absolute bottom-[-30%] left-[10%] w-[600px] h-[600px] rounded-full"
+               style={{ background: 'radial-gradient(circle, rgba(167,139,250,0.12), transparent 65%)', filter: 'blur(80px)' }} />
+          <div className="absolute inset-0 opacity-[0.07]" style={{
             backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
-            backgroundSize: '80px 80px',
+            backgroundSize: '90px 90px',
             maskImage: 'radial-gradient(ellipse at 50% 40%, black 20%, transparent 70%)',
             WebkitMaskImage: 'radial-gradient(ellipse at 50% 40%, black 20%, transparent 70%)',
           }} />
@@ -138,55 +140,76 @@ const Landing: React.FC = () => {
 
         <div className="relative z-10 max-w-[1400px] mx-auto">
 
+          {/* Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+            className="mx-auto mb-8 w-fit flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12px] font-medium"
+            style={{ border: '1px solid rgba(139,92,246,0.25)', background: 'rgba(139,92,246,0.08)', color: '#C4B5FD' }}>
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#A78BFA' }} />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: '#A78BFA' }} />
+            </span>
+            Novo · Gemini 3 Pro rodando ao vivo
+          </motion.div>
+
           {/* Headline */}
           <motion.h1
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}
-            className="text-center mx-auto max-w-[16ch]"
-            style={{ ...DISPLAY, fontSize: 'clamp(2.75rem, 8.5vw, 8rem)' }}>
-            Carrosséis que <span style={{ color: '#A78BFA' }}>convertem.</span>
+            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
+            className="text-center mx-auto max-w-[14ch]"
+            style={{ ...DISPLAY, fontSize: 'clamp(3rem, 9vw, 8.5rem)' }}>
+            Carrosséis que{' '}
+            <span style={{
+              background: 'linear-gradient(120deg, #A78BFA 0%, #F5F3FF 50%, #8B5CF6 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>convertem.</span>
           </motion.h1>
 
           {/* Sub */}
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-8 mx-auto max-w-2xl text-center text-lg md:text-xl leading-relaxed"
-            style={{ color: 'rgba(245,245,247,0.6)' }}>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7, delay: 0.2 }}
+            className="mt-8 mx-auto max-w-xl text-center text-lg md:text-xl leading-relaxed"
+            style={{ color: 'rgba(245,245,247,0.62)' }}>
             O marketplace de estilos editoriais para Instagram. Descreva o tema, escolha um preset e publique — sem abrir o Photoshop.
           </motion.p>
 
           {/* CTAs */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
-            className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.35 }}
+            className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button onClick={goCreate}
-              className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-[15px] font-semibold transition-transform hover:scale-[1.03]"
-              style={{ background: '#8B5CF6', color: '#fff', boxShadow: '0 20px 60px -15px rgba(139,92,246,0.6)' }}>
+              className="group inline-flex items-center gap-2 px-8 py-4 rounded-full text-[15px] font-semibold transition-transform hover:scale-[1.03]"
+              style={{ background: '#8B5CF6', color: '#fff', boxShadow: '0 25px 70px -18px rgba(139,92,246,0.75)' }}>
               Criar meu primeiro post
               <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </button>
             <button onClick={() => document.getElementById('showcase')?.scrollIntoView({ behavior: 'smooth' })}
-              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-[15px] font-semibold backdrop-blur-md transition-colors hover:bg-white/10"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-[15px] font-semibold backdrop-blur-md transition-colors hover:bg-white/10"
               style={{ border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.04)', color: '#fff' }}>
               Ver showcase
             </button>
           </motion.div>
 
-          <p className="mt-5 text-center text-[12px]" style={{ color: 'rgba(245,245,247,0.4)' }}>
+          <p className="mt-6 text-center text-[12px]" style={{ color: 'rgba(245,245,247,0.42)' }}>
             Grátis para começar · sem cartão · 1 post cortesia
           </p>
 
-        </div>
-      </section>
-
-      {/* LOGOS */}
-      <section className="relative py-12 border-y" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-        <div className="max-w-[1200px] mx-auto px-6">
-          <p className="text-center text-[11px] uppercase tracking-[0.25em] mb-6" style={{ color: 'rgba(245,245,247,0.35)' }}>
-            Usado por criadores, agências e times de marketing
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4 opacity-60">
-            {['STUDIO NORTE', 'ATELIÊ 21', 'NEX', 'CASA IVO', 'MÚLTIPLA', 'REDE', 'LUME.CO'].map((n) => (
-              <span key={n} className="text-[13px] font-semibold tracking-wide" style={{ color: 'rgba(245,245,247,0.55)' }}>{n}</span>
+          {/* Meta strip */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5 }}
+            className="mt-20 mx-auto max-w-3xl grid grid-cols-3 gap-px rounded-2xl overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            {[
+              { k: '4:5 · 1:1 · 9:16', v: 'Formatos nativos' },
+              { k: '< 30s', v: 'Do prompt ao post' },
+              { k: 'Instagram API', v: 'Publicação direta' },
+            ].map((m) => (
+              <div key={m.v} className="px-4 py-5 text-center" style={{ background: '#0A0A0F' }}>
+                <div className="text-[15px] font-semibold tracking-tight" style={{ color: '#F5F5F7' }}>{m.k}</div>
+                <div className="mt-1 text-[11px] uppercase tracking-[0.18em]" style={{ color: 'rgba(245,245,247,0.42)' }}>{m.v}</div>
+              </div>
             ))}
-          </div>
+          </motion.div>
+
         </div>
       </section>
 

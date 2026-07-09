@@ -99,8 +99,8 @@ function DistortedOrb({ scrollY }: { scrollY: React.MutableRefObject<number> }) 
           void main() {
             vNormal = normal;
             float n = snoise(position * 1.3 + uTime * 0.25);
-            float mouseInf = length(uMouse) * 0.4;
-            float amp = 0.35 + uScroll * 0.6 + mouseInf;
+            float mouseInf = length(uMouse) * 0.15;
+            float amp = 0.18 + uScroll * 0.15 + mouseInf;
             vec3 displaced = position + normal * n * amp;
             vPos = displaced;
             gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);

@@ -134,21 +134,37 @@ const Landing: React.FC = () => {
             </button>
           </div>
         </div>
+        {/* Scroll progress line */}
+        <motion.div className="absolute bottom-0 left-0 h-[2px] origin-left"
+          style={{ scaleX: progressBar, background: 'linear-gradient(90deg,#8B5CF6,#C4B5FD,#8B5CF6)', width: '100%' }} />
       </header>
 
-      {/* HERO — Asymmetric Marquee */}
-      <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 px-6 md:px-12 lg:px-20">
+      {/* HERO — Asymmetric Marquee + 3D Orb */}
+      <section ref={heroRef} className="relative pt-32 pb-20 md:pt-40 md:pb-32 px-6 md:px-12 lg:px-20 min-h-[100vh]">
+        {/* Ambient */}
         <div aria-hidden className="absolute inset-0 -z-0 overflow-hidden">
           <div className="absolute top-40 left-1/3 w-[900px] h-[900px] rounded-full"
                style={{ background: 'radial-gradient(closest-side, rgba(139,92,246,0.22), transparent 70%)', filter: 'blur(60px)' }} />
         </div>
 
-        <div className="relative max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        {/* 3D Interactive Backdrop */}
+        <motion.div aria-hidden className="absolute inset-0 pointer-events-none"
+                    style={{ opacity: canvasOpacity }}>
+          <Suspense fallback={null}>
+            <HeroCanvas scrollY={scrollY} />
+          </Suspense>
+        </motion.div>
+
+        <motion.div style={{ y: heroY, opacity: heroOpacity, scale: heroScale }}
+                    className="relative max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           {/* Left — editorial lockup */}
           <div className="lg:col-span-7 flex flex-col justify-between min-h-[640px]">
             <div className="mb-10 flex items-center gap-3 text-[11px] uppercase tracking-[0.3em]"
                  style={{ color: 'rgba(236,234,244,0.5)' }}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#8B5CF6' }} />
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#A78BFA' }} />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: '#8B5CF6' }} />
+              </span>
               Marketplace de estilos · ao vivo
             </div>
 
@@ -161,6 +177,7 @@ const Landing: React.FC = () => {
                 <span style={{ color: '#A78BFA' }}>editorial</span><br />
                 <span style={{ fontStyle: 'normal', fontWeight: 400 }}>redefinida.</span>
               </motion.h1>
+
 
               <div className="max-w-md space-y-8">
                 <p className="text-lg leading-relaxed font-light" style={{ color: 'rgba(236,234,244,0.6)' }}>

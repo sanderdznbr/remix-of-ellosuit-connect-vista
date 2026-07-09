@@ -148,15 +148,20 @@ const Landing: React.FC = () => {
         </div>
 
         {/* 3D Interactive Backdrop */}
-        <motion.div aria-hidden className="absolute inset-0 pointer-events-none"
-                    style={{ opacity: canvasOpacity }}>
+        <motion.div aria-hidden className="absolute inset-0 pointer-events-none z-0"
+                    style={{ opacity: canvasOpacity, mixBlendMode: 'screen' }}>
           <Suspense fallback={null}>
             <HeroCanvas scrollY={scrollY} />
           </Suspense>
+          {/* Soft vignette to keep text legible */}
+          <div className="absolute inset-0" style={{
+            background: 'radial-gradient(ellipse at 30% 45%, rgba(5,5,5,0.85) 0%, rgba(5,5,5,0.4) 40%, transparent 70%)'
+          }} />
         </motion.div>
 
         <motion.div style={{ y: heroY, opacity: heroOpacity, scale: heroScale }}
-                    className="relative max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+                    className="relative z-10 max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+
           {/* Left — editorial lockup */}
           <div className="lg:col-span-7 flex flex-col justify-between min-h-[640px]">
             <div className="mb-10 flex items-center gap-3 text-[11px] uppercase tracking-[0.3em]"

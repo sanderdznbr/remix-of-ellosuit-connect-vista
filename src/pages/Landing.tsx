@@ -140,23 +140,22 @@ const Landing: React.FC = () => {
       </header>
 
       {/* HERO — Asymmetric Marquee + 3D Orb */}
-      <section ref={heroRef} className="relative pt-32 pb-20 md:pt-40 md:pb-32 px-6 md:px-12 lg:px-20 min-h-[100vh]">
-        {/* Ambient */}
-        <div aria-hidden className="absolute inset-0 -z-0 overflow-hidden">
-          <div className="absolute top-40 left-1/3 w-[900px] h-[900px] rounded-full"
-               style={{ background: 'radial-gradient(closest-side, rgba(139,92,246,0.22), transparent 70%)', filter: 'blur(60px)' }} />
+      <section ref={heroRef} className="relative pt-32 pb-20 md:pt-40 md:pb-32 px-6 md:px-12 lg:px-20 min-h-[100vh] overflow-hidden">
+        {/* Ambient — subtle radial glow behind headline */}
+        <div aria-hidden className="absolute inset-0 -z-0 pointer-events-none">
+          <div className="absolute -top-20 -left-40 w-[520px] h-[520px] rounded-full"
+               style={{ background: 'radial-gradient(closest-side, rgba(139,92,246,0.18), transparent 70%)', filter: 'blur(40px)' }} />
         </div>
 
-        {/* 3D Interactive Backdrop */}
-        <motion.div aria-hidden className="absolute inset-0 pointer-events-none z-0"
-                    style={{ opacity: canvasOpacity, mixBlendMode: 'screen' }}>
+        {/* 3D Interactive Backdrop — contained behind marquee only */}
+        <motion.div aria-hidden
+                    className="hidden lg:block absolute top-20 right-0 w-[46%] h-[80%] pointer-events-none z-0 overflow-hidden"
+                    style={{ opacity: canvasOpacity, mixBlendMode: 'screen',
+                             WebkitMaskImage: 'radial-gradient(ellipse at center, black 40%, transparent 72%)',
+                             maskImage: 'radial-gradient(ellipse at center, black 40%, transparent 72%)' }}>
           <Suspense fallback={null}>
             <HeroCanvas scrollY={scrollY} />
           </Suspense>
-          {/* Soft vignette to keep text legible */}
-          <div className="absolute inset-0" style={{
-            background: 'radial-gradient(ellipse at 30% 45%, rgba(5,5,5,0.85) 0%, rgba(5,5,5,0.4) 40%, transparent 70%)'
-          }} />
         </motion.div>
 
         <motion.div style={{ y: heroY, opacity: heroOpacity, scale: heroScale }}

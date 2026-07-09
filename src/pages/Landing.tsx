@@ -140,23 +140,22 @@ const Landing: React.FC = () => {
       </header>
 
       {/* HERO — Asymmetric Marquee + 3D Orb */}
-      <section ref={heroRef} className="relative pt-32 pb-20 md:pt-40 md:pb-32 px-6 md:px-12 lg:px-20 min-h-[100vh]">
-        {/* Ambient */}
-        <div aria-hidden className="absolute inset-0 -z-0 overflow-hidden">
-          <div className="absolute top-40 left-1/3 w-[900px] h-[900px] rounded-full"
-               style={{ background: 'radial-gradient(closest-side, rgba(139,92,246,0.22), transparent 70%)', filter: 'blur(60px)' }} />
+      <section ref={heroRef} className="relative pt-32 pb-20 md:pt-40 md:pb-32 px-6 md:px-12 lg:px-20 min-h-[100vh] overflow-hidden">
+        {/* Ambient — subtle radial glow behind headline */}
+        <div aria-hidden className="absolute inset-0 -z-0 pointer-events-none">
+          <div className="absolute -top-20 -left-40 w-[520px] h-[520px] rounded-full"
+               style={{ background: 'radial-gradient(closest-side, rgba(139,92,246,0.18), transparent 70%)', filter: 'blur(40px)' }} />
         </div>
 
-        {/* 3D Interactive Backdrop */}
-        <motion.div aria-hidden className="absolute inset-0 pointer-events-none z-0"
-                    style={{ opacity: canvasOpacity, mixBlendMode: 'screen' }}>
+        {/* 3D Interactive Backdrop — small accent behind marquee */}
+        <motion.div aria-hidden
+                    className="hidden lg:block absolute pointer-events-none z-0 overflow-hidden"
+                    style={{ opacity: canvasOpacity, top: '30%', right: '-6%', width: '520px', height: '520px',
+                             WebkitMaskImage: 'radial-gradient(circle at center, black 30%, transparent 65%)',
+                             maskImage: 'radial-gradient(circle at center, black 30%, transparent 65%)' }}>
           <Suspense fallback={null}>
             <HeroCanvas scrollY={scrollY} />
           </Suspense>
-          {/* Soft vignette to keep text legible */}
-          <div className="absolute inset-0" style={{
-            background: 'radial-gradient(ellipse at 30% 45%, rgba(5,5,5,0.85) 0%, rgba(5,5,5,0.4) 40%, transparent 70%)'
-          }} />
         </motion.div>
 
         <motion.div style={{ y: heroY, opacity: heroOpacity, scale: heroScale }}
@@ -237,7 +236,7 @@ const Landing: React.FC = () => {
             </div>
 
             {/* Floating badge */}
-            <div className="hidden md:flex absolute top-1/2 -left-8 -translate-y-1/2 w-32 h-32 rounded-full items-center justify-center text-center leading-tight font-bold text-[10px] uppercase tracking-[0.15em] rotate-[-6deg]"
+            <div className="hidden md:flex absolute -bottom-6 -left-6 w-28 h-28 rounded-full items-center justify-center text-center leading-tight font-bold text-[10px] uppercase tracking-[0.15em] rotate-[-6deg]"
                  style={{ background: '#F5F3FF', color: '#0a0a0f', boxShadow: '0 20px 60px -20px rgba(139,92,246,0.5)' }}>
               Somente<br />estilos<br />curados
             </div>

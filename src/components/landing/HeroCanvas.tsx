@@ -29,15 +29,15 @@ function DistortedOrb({ scrollY }: { scrollY: React.MutableRefObject<number> }) 
       new THREE.Vector2(state.pointer.x, state.pointer.y),
       0.05
     );
-    meshRef.current.rotation.y = t * 0.08 + scrollY.current * 0.5;
-    meshRef.current.rotation.x = Math.sin(t * 0.1) * 0.2 + scrollY.current * 0.3;
-    const s = 1 + scrollY.current * 0.4;
+    meshRef.current.rotation.y = t * 0.08 + scrollY.current * 0.3;
+    meshRef.current.rotation.x = Math.sin(t * 0.1) * 0.2 + scrollY.current * 0.15;
+    const s = 0.9 + scrollY.current * 0.12;
     meshRef.current.scale.setScalar(s);
   });
 
   return (
-    <mesh ref={meshRef} position={[1.2, 0, 0]}>
-      <icosahedronGeometry args={[1.6, 64]} />
+    <mesh ref={meshRef} position={[0, 0, 0]}>
+      <icosahedronGeometry args={[1.2, 48]} />
       <shaderMaterial
         ref={materialRef}
         uniforms={uniforms}
@@ -99,8 +99,8 @@ function DistortedOrb({ scrollY }: { scrollY: React.MutableRefObject<number> }) 
           void main() {
             vNormal = normal;
             float n = snoise(position * 1.3 + uTime * 0.25);
-            float mouseInf = length(uMouse) * 0.4;
-            float amp = 0.35 + uScroll * 0.6 + mouseInf;
+            float mouseInf = length(uMouse) * 0.15;
+            float amp = 0.18 + uScroll * 0.15 + mouseInf;
             vec3 displaced = position + normal * n * amp;
             vPos = displaced;
             gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);

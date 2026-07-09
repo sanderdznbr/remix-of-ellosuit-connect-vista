@@ -235,17 +235,19 @@ const Landing: React.FC = () => {
             </p>
           </div>
 
-          {/* Bento grid */}
-          <div className="grid grid-cols-12 gap-3 md:gap-4 auto-rows-[140px]">
-            {/* Large feature */}
-            <BentoCard className="col-span-12 md:col-span-8 row-span-3" src={bentoImages[0]} title="Editorial" tag="Serif · Minimal" featured />
-            <BentoCard className="col-span-6 md:col-span-4 row-span-2" src={bentoImages[1]} title="Neo-Brutal" tag="Grotesk" />
-            <BentoCard className="col-span-6 md:col-span-4 row-span-2" src={bentoImages[2]} title="Boutique" tag="Serif · Cream" />
-            <BentoCard className="col-span-6 md:col-span-3 row-span-2" src={bentoImages[3]} title="Streetwear" tag="Display" />
-            <BentoCard className="col-span-6 md:col-span-3 row-span-2" src={bentoImages[4]} title="Corporate" tag="Sans" />
-            <BentoCard className="col-span-6 md:col-span-3 row-span-2" src={bentoImages[5]} title="Painel" tag="Mono" />
-            <BentoCard className="col-span-6 md:col-span-3 row-span-2" src={bentoImages[6]} title="Retrô" tag="Serif itálico" />
+          {/* Bento grid — aspect-based, faces visible */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <BentoCard className="col-span-2 row-span-2 aspect-square" src={bentoImages[0]} title="Editorial" tag="Serif · Minimal" featured />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[1]} title="Neo-Brutal" tag="Grotesk" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[2]} title="Boutique" tag="Serif · Cream" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[3]} title="Streetwear" tag="Display" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[4]} title="Corporate" tag="Sans" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[5]} title="Painel" tag="Mono" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[6]} title="Retrô" tag="Serif itálico" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[7]} title="Cinema" tag="Grotesk XL" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[8]} title="Boho" tag="Serif · Warm" />
           </div>
+
 
           <div className="mt-10 flex justify-center">
             <button onClick={goCreate} className="text-[13px] font-medium flex items-center gap-1.5 px-5 py-2.5 rounded-full border transition-colors hover:bg-white/5"

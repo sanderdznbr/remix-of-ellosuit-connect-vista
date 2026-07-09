@@ -237,7 +237,7 @@ const Landing: React.FC = () => {
               Somente<br />estilos<br />curados
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* LOGOS */}

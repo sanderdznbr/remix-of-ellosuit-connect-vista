@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import "./styles/meeting-dark-theme.css";
+// @ts-ignore -- fontsource types
 import "@fontsource-variable/inter";
 import "@fontsource/fraunces/300.css";
 import "@fontsource/fraunces/400.css";

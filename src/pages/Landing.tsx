@@ -139,109 +139,121 @@ const Landing: React.FC = () => {
           style={{ scaleX: progressBar, background: 'linear-gradient(90deg,#8B5CF6,#C4B5FD,#8B5CF6)', width: '100%' }} />
       </header>
 
-      {/* HERO — Asymmetric Marquee + 3D Orb */}
-      <section ref={heroRef} className="relative pt-32 pb-20 md:pt-40 md:pb-32 px-6 md:px-12 lg:px-20 min-h-[100vh] overflow-hidden">
-        {/* Ambient — subtle radial glow behind headline */}
-        <div aria-hidden className="absolute inset-0 -z-0 pointer-events-none">
-          <div className="absolute -top-20 -left-40 w-[520px] h-[520px] rounded-full"
-               style={{ background: 'radial-gradient(closest-side, rgba(139,92,246,0.18), transparent 70%)', filter: 'blur(40px)' }} />
+      {/* HERO — Cards flutuantes centrados */}
+      <section ref={heroRef} className="relative min-h-[100vh] overflow-hidden flex flex-col">
+        {/* Ambient glows */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-0">
+          <div className="absolute -top-[10%] -left-[10%] w-[55%] h-[55%] rounded-full"
+               style={{ background: 'rgba(139,92,246,0.10)', filter: 'blur(120px)' }} />
+          <div className="absolute -bottom-[10%] -right-[10%] w-[45%] h-[45%] rounded-full"
+               style={{ background: 'rgba(139,92,246,0.15)', filter: 'blur(100px)' }} />
         </div>
 
-        {/* 3D Interactive Backdrop — small accent behind marquee */}
+        {/* Subtle 3D accent */}
         <motion.div aria-hidden
                     className="hidden lg:block absolute pointer-events-none z-0 overflow-hidden"
-                    style={{ opacity: canvasOpacity, top: '30%', right: '-6%', width: '520px', height: '520px',
-                             WebkitMaskImage: 'radial-gradient(circle at center, black 30%, transparent 65%)',
-                             maskImage: 'radial-gradient(circle at center, black 30%, transparent 65%)' }}>
+                    style={{ opacity: canvasOpacity, top: '5%', right: '-10%', width: '560px', height: '560px',
+                             WebkitMaskImage: 'radial-gradient(circle at center, black 20%, transparent 65%)',
+                             maskImage: 'radial-gradient(circle at center, black 20%, transparent 65%)' }}>
           <Suspense fallback={null}>
             <HeroCanvas scrollY={scrollY} />
           </Suspense>
         </motion.div>
 
-        <motion.div style={{ y: heroY, opacity: heroOpacity, scale: heroScale }}
-                    className="relative z-10 max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        <motion.main style={{ y: heroY, opacity: heroOpacity, scale: heroScale }}
+                     className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center pt-32 pb-40 max-w-[1400px] mx-auto w-full">
+          {/* Badge */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+                      className="mb-10 inline-flex items-center gap-2 px-5 py-2 rounded-full backdrop-blur-xl"
+                      style={{ border: '1px solid rgba(139,92,246,0.30)', background: 'rgba(139,92,246,0.05)' }}>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#8B5CF6' }} />
+              <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: '#8B5CF6' }} />
+            </span>
+            <span className="text-[11px] uppercase tracking-[0.25em] font-bold" style={{ color: '#A78BFA' }}>
+              A nova era editorial de IA
+            </span>
+          </motion.div>
 
-          {/* Left — editorial lockup */}
-          <div className="lg:col-span-7 flex flex-col justify-between min-h-[640px]">
-            <div className="mb-10 flex items-center gap-3 text-[11px] uppercase tracking-[0.3em]"
-                 style={{ color: 'rgba(236,234,244,0.5)' }}>
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#A78BFA' }} />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: '#8B5CF6' }} />
+          {/* Headline */}
+          <motion.h1
+            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.05 }}
+            className="max-w-6xl mb-10 leading-[0.85] tracking-tight"
+            style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 'clamp(3.5rem, 10vw, 120px)' }}>
+            Sua estética<br />
+            <span style={{ fontStyle: 'italic', color: '#A78BFA', paddingRight: '0.15em' }}>elevada</span>
+            <span> à perfeição.</span>
+          </motion.h1>
+
+          {/* Description */}
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.9, delay: 0.2 }}
+                    className="max-w-xl text-lg md:text-2xl leading-relaxed mb-14"
+                    style={{ color: 'rgba(255,255,255,0.4)' }}>
+            O marketplace definitivo de estilos editoriais para carrosséis. Designs exclusivos, curados e gerados por IA, feitos para dominar o algoritmo.
+          </motion.p>
+
+          {/* CTAs */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.35 }}
+                      className="flex flex-col sm:flex-row items-center gap-6">
+            <button onClick={goCreate}
+                    className="group relative px-10 md:px-12 py-4 md:py-5 font-black text-lg md:text-xl rounded-2xl overflow-hidden transition-transform hover:scale-105"
+                    style={{ background: '#8B5CF6', color: '#0a0a0f', boxShadow: '0 20px 50px rgba(139,92,246,0.3)' }}>
+              <span className="relative z-10">Explorar estilos</span>
+              <div className="absolute inset-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300" style={{ background: '#ffffff' }} />
+            </button>
+            <button onClick={() => document.getElementById('showcase')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="px-10 md:px-12 py-4 md:py-5 font-bold text-lg md:text-xl rounded-2xl transition-colors flex items-center gap-4 backdrop-blur-md hover:bg-white/10"
+                    style={{ border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff' }}>
+              <span className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                <span className="ml-0.5 border-solid border-l-white border-t-transparent border-b-transparent"
+                      style={{ width: 0, height: 0, borderLeftWidth: 9, borderTopWidth: 5, borderBottomWidth: 5 }} />
               </span>
-              Marketplace de estilos · ao vivo
-            </div>
+              Ver showreel
+            </button>
+          </motion.div>
 
-            <div className="space-y-10">
-              <motion.h1
-                initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9 }}
-                className="leading-[0.85] tracking-[-0.035em]"
-                style={{ fontFamily: SERIF, fontWeight: 300, fontStyle: 'italic', fontSize: 'clamp(3.5rem, 10vw, 8.5rem)' }}>
-                Curadoria<br />
-                <span style={{ color: '#A78BFA' }}>editorial</span><br />
-                <span style={{ fontStyle: 'normal', fontWeight: 400 }}>redefinida.</span>
-              </motion.h1>
-
-
-              <div className="max-w-md space-y-8">
-                <p className="text-lg leading-relaxed font-light" style={{ color: 'rgba(236,234,244,0.6)' }}>
-                  A ellocontent é o marketplace de arquiteturas de carrossel para Instagram. Um prompt vira narrativa visual sofisticada — com tipografia, ritmo e paleta sob curadoria.
-                </p>
-
-                <div className="flex items-center gap-6 flex-wrap">
-                  <button onClick={goCreate}
-                          className="group px-7 py-3.5 text-[13px] font-semibold uppercase tracking-[0.15em] transition-colors hover:bg-violet-500 hover:text-white"
-                          style={{ background: '#FFFFFF', color: '#0a0a0f' }}>
-                    Explorar estilos
-                  </button>
-                  <button onClick={() => document.getElementById('showcase')?.scrollIntoView({ behavior: 'smooth' })}
-                          className="text-sm underline underline-offset-8 transition-colors hover:text-white"
-                          style={{ color: 'rgba(236,234,244,0.5)' }}>
-                    Ver showreel
-                  </button>
+          {/* Floating Preview Cards */}
+          <div className="absolute left-0 right-0 -bottom-24 md:-bottom-28 pointer-events-none h-[360px] md:h-[400px] flex justify-center items-end gap-6 md:gap-8 px-4">
+            {[
+              { rot: -15, ty: 96, z: 10, hidden: 'hidden sm:flex', tile: tiles[2], label: 'Noir Luxe', title: 'Minimalism' },
+              { rot: 0,   ty: 16, z: 20, hidden: 'flex',            tile: tiles[0], label: 'Featured Style', title: 'Hyper-Active' },
+              { rot: 15,  ty: 96, z: 10, hidden: 'hidden lg:flex',  tile: tiles[4], label: 'Editorial', title: 'The Vogue' },
+            ].map((c, i) => (
+              <motion.div key={i}
+                initial={{ opacity: 0, y: c.ty + 40 }} animate={{ opacity: 0.95, y: c.ty }}
+                transition={{ duration: 0.9, delay: 0.5 + i * 0.12, ease: 'easeOut' }}
+                className={`${c.hidden} w-52 md:w-72 h-[360px] md:h-[400px] rounded-3xl overflow-hidden relative group`}
+                style={{
+                  background: '#111',
+                  border: `1px solid rgba(255,255,255,${c.z === 20 ? 0.2 : 0.1})`,
+                  transform: `rotate(${c.rot}deg)`,
+                  zIndex: c.z,
+                  boxShadow: c.z === 20 ? '0 50px 100px rgba(0,0,0,0.9)' : '0 25px 50px rgba(0,0,0,0.6)',
+                }}>
+                <div className="absolute inset-0 z-10" style={{ background: 'linear-gradient(to top, #000, rgba(0,0,0,0.4) 40%, transparent)' }} />
+                {c.tile?.src ? (
+                  <img src={c.tile.src} alt={c.tile.label || c.title}
+                       className="w-full h-full object-cover transition-transform duration-[1000ms] group-hover:scale-110" loading="lazy" />
+                ) : (
+                  <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.35), transparent 70%)' }} />
+                )}
+                <div className="absolute bottom-6 left-6 z-20 text-left">
+                  <p className="text-[10px] uppercase tracking-widest font-black mb-1" style={{ color: '#A78BFA' }}>{c.label}</p>
+                  <h4 className="text-xl md:text-2xl leading-none" style={{ fontFamily: SERIF, fontWeight: 500 }}>
+                    {c.tile?.label ? c.tile.label.slice(0, 22) : c.title}
+                  </h4>
                 </div>
-              </div>
-            </div>
-
-            <div className="mt-16 border-t pt-8 flex gap-14"
-                 style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-              {[
-                { n: '12k+', l: 'Criadores' },
-                { n: '400+', l: 'Estilos curados' },
-                { n: '6M+', l: 'Posts gerados' },
-              ].map(s => (
-                <div key={s.n}>
-                  <p style={{ fontFamily: SERIF, fontWeight: 500, fontSize: '1.75rem', letterSpacing: '-0.02em' }}>{s.n}</p>
-                  <p className="text-[10px] uppercase tracking-[0.25em] mt-1" style={{ color: 'rgba(236,234,244,0.4)' }}>{s.l}</p>
-                </div>
-              ))}
-            </div>
+              </motion.div>
+            ))}
           </div>
+        </motion.main>
 
-          {/* Right — dense marketplace marquee */}
-          <div className="lg:col-span-5 relative">
-            <div className="grid grid-cols-2 gap-4 h-[720px] overflow-hidden"
-                 style={{ WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)',
-                          maskImage: 'linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)' }}>
-              <div className="space-y-4 pt-12 ec-marquee-up">
-                {[...colA, ...colA].map((t, i) => (
-                  <MarqueeTile key={`a${i}`} src={t.src} label={t.label} featured={i === 0} />
-                ))}
-              </div>
-              <div className="space-y-4 ec-marquee-down">
-                {[...colB, ...colB].map((t, i) => (
-                  <MarqueeTile key={`b${i}`} src={t.src} label={t.label} featured={i === 1} />
-                ))}
-              </div>
-            </div>
-
-            {/* Floating badge */}
-            <div className="hidden md:flex absolute -bottom-6 -left-6 w-28 h-28 rounded-full items-center justify-center text-center leading-tight font-bold text-[10px] uppercase tracking-[0.15em] rotate-[-6deg]"
-                 style={{ background: '#F5F3FF', color: '#0a0a0f', boxShadow: '0 20px 60px -20px rgba(139,92,246,0.5)' }}>
-              Somente<br />estilos<br />curados
-            </div>
-          </div>
-        </motion.div>
+        {/* Scrolling background text */}
+        <div aria-hidden className="absolute bottom-4 left-0 whitespace-nowrap select-none pointer-events-none opacity-[0.035]">
+          <span className="uppercase tracking-tighter font-black" style={{ fontFamily: SERIF, fontSize: '150px' }}>
+            EDITORIAIS IA · EDITORIAIS IA · EDITORIAIS IA
+          </span>
+        </div>
       </section>
 
       {/* LOGOS */}

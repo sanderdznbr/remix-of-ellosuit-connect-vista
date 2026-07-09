@@ -236,7 +236,7 @@ const Landing: React.FC = () => {
             </div>
 
             {/* Floating badge */}
-            <div className="hidden md:flex absolute top-1/2 -left-8 -translate-y-1/2 w-32 h-32 rounded-full items-center justify-center text-center leading-tight font-bold text-[10px] uppercase tracking-[0.15em] rotate-[-6deg]"
+            <div className="hidden md:flex absolute -bottom-6 -left-6 w-28 h-28 rounded-full items-center justify-center text-center leading-tight font-bold text-[10px] uppercase tracking-[0.15em] rotate-[-6deg]"
                  style={{ background: '#F5F3FF', color: '#0a0a0f', boxShadow: '0 20px 60px -20px rgba(139,92,246,0.5)' }}>
               Somente<br />estilos<br />curados
             </div>

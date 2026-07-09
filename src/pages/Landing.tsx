@@ -39,7 +39,7 @@ const Landing: React.FC = () => {
   const heroY = useTransform(heroProgress, [0, 1], [0, -140]);
   const heroOpacity = useTransform(heroProgress, [0, 0.85], [1, 0]);
   const heroScale = useTransform(heroProgress, [0, 1], [1, 0.94]);
-  const canvasOpacity = useTransform(heroProgress, [0, 1], [1, 0.15]);
+  const canvasOpacity = useTransform(heroProgress, [0, 1], [0.55, 0.05]);
 
   useMotionValueEvent(heroProgress, 'change', (v) => { scrollY.current = v; });
 

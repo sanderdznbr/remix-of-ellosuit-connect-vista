@@ -220,8 +220,30 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
+      {/* ─────────── STATS strip ─────────── */}
+      <section className="relative py-16 md:py-24 px-6">
+        <div className="max-w-[1100px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4 text-center">
+          {[
+            { n: '6M+', l: 'Criativos gerados' },
+            { n: '60+', l: 'Estilos curados' },
+            { n: '12k', l: 'Criadores ativos' },
+            { n: '4.9★', l: 'Avaliação média' },
+          ].map((s) => (
+            <div key={s.n}>
+              <div style={{ fontFamily: SERIF, fontWeight: 300, fontSize: 'clamp(2.2rem, 5vw, 3.5rem)', letterSpacing: '-0.02em', lineHeight: 1 }}
+                className="bg-clip-text text-transparent"
+                >
+                <span style={{ background: 'linear-gradient(180deg,#FFFFFF 0%,#A78BFA 120%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{s.n}</span>
+              </div>
+              <div className="mt-3 text-[11px] uppercase tracking-[0.25em]" style={{ color: 'rgba(236,234,244,0.4)' }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+
       {/* ─────────── BENTO — Estilos ─────────── */}
-      <section id="estilos" className="relative py-32 md:py-40 px-6">
+      <section id="estilos" className="relative py-20 md:py-28 px-6">
         <div className="max-w-[1240px] mx-auto">
           <div className="flex items-end justify-between mb-14 flex-wrap gap-6">
             <div>
@@ -235,17 +257,19 @@ const Landing: React.FC = () => {
             </p>
           </div>
 
-          {/* Bento grid */}
-          <div className="grid grid-cols-12 gap-3 md:gap-4 auto-rows-[140px]">
-            {/* Large feature */}
-            <BentoCard className="col-span-12 md:col-span-8 row-span-3" src={bentoImages[0]} title="Editorial" tag="Serif · Minimal" featured />
-            <BentoCard className="col-span-6 md:col-span-4 row-span-2" src={bentoImages[1]} title="Neo-Brutal" tag="Grotesk" />
-            <BentoCard className="col-span-6 md:col-span-4 row-span-2" src={bentoImages[2]} title="Boutique" tag="Serif · Cream" />
-            <BentoCard className="col-span-6 md:col-span-3 row-span-2" src={bentoImages[3]} title="Streetwear" tag="Display" />
-            <BentoCard className="col-span-6 md:col-span-3 row-span-2" src={bentoImages[4]} title="Corporate" tag="Sans" />
-            <BentoCard className="col-span-6 md:col-span-3 row-span-2" src={bentoImages[5]} title="Painel" tag="Mono" />
-            <BentoCard className="col-span-6 md:col-span-3 row-span-2" src={bentoImages[6]} title="Retrô" tag="Serif itálico" />
+          {/* Bento grid — aspect-based, faces visible */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <BentoCard className="col-span-2 row-span-2 aspect-square" src={bentoImages[0]} title="Editorial" tag="Serif · Minimal" featured />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[1]} title="Neo-Brutal" tag="Grotesk" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[2]} title="Boutique" tag="Serif · Cream" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[3]} title="Streetwear" tag="Display" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[4]} title="Corporate" tag="Sans" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[5]} title="Painel" tag="Mono" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[6]} title="Retrô" tag="Serif itálico" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[7]} title="Cinema" tag="Grotesk XL" />
+            <BentoCard className="aspect-[4/5]" src={bentoImages[8]} title="Boho" tag="Serif · Warm" />
           </div>
+
 
           <div className="mt-10 flex justify-center">
             <button onClick={goCreate} className="text-[13px] font-medium flex items-center gap-1.5 px-5 py-2.5 rounded-full border transition-colors hover:bg-white/5"
@@ -257,7 +281,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── COMO FUNCIONA ─────────── */}
-      <section id="como" className="relative py-32 md:py-40 px-6" style={{ background: 'linear-gradient(180deg, transparent, rgba(139,92,246,0.03), transparent)' }}>
+      <section id="como" className="relative py-20 md:py-28 px-6" style={{ background: 'linear-gradient(180deg, transparent, rgba(139,92,246,0.03), transparent)' }}>
         <div className="max-w-[1100px] mx-auto">
           <div className="text-center mb-20">
             <div className="text-[11px] uppercase tracking-[0.3em] mb-4" style={{ color: '#A78BFA' }}>Como funciona</div>
@@ -290,7 +314,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── SHOWCASE MARQUEE ─────────── */}
-      <section id="showcase" className="relative py-32 md:py-40 overflow-hidden">
+      <section id="showcase" className="relative py-20 md:py-28 overflow-hidden">
         <div className="max-w-[1240px] mx-auto px-6 mb-16 flex items-end justify-between flex-wrap gap-6">
           <div>
             <div className="text-[11px] uppercase tracking-[0.3em] mb-4" style={{ color: '#A78BFA' }}>Feito com ellocontent</div>
@@ -324,7 +348,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── QUOTE ─────────── */}
-      <section className="relative py-32 md:py-44 px-6">
+      <section className="relative py-24 md:py-32 px-6">
         <div className="max-w-[900px] mx-auto text-center">
           <div className="text-[11px] uppercase tracking-[0.3em] mb-8" style={{ color: 'rgba(236,234,244,0.4)' }}>—  Depoimento</div>
           <blockquote style={{ fontFamily: SERIF, fontWeight: 300, fontStyle: 'italic', fontSize: 'clamp(1.6rem, 3.5vw, 2.75rem)', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
@@ -341,7 +365,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── PRICING ─────────── */}
-      <section className="relative py-32 md:py-40 px-6">
+      <section className="relative py-20 md:py-28 px-6">
         <div className="max-w-[1100px] mx-auto">
           <div className="text-center mb-16">
             <div className="text-[11px] uppercase tracking-[0.3em] mb-4" style={{ color: '#A78BFA' }}>Preços</div>
@@ -397,7 +421,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── FAQ ─────────── */}
-      <section className="relative py-32 md:py-40 px-6">
+      <section className="relative py-20 md:py-28 px-6">
         <div className="max-w-[820px] mx-auto">
           <div className="text-center mb-16">
             <div className="text-[11px] uppercase tracking-[0.3em] mb-4" style={{ color: '#A78BFA' }}>FAQ</div>
@@ -430,7 +454,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* ─────────── CTA FINAL ─────────── */}
-      <section className="relative py-32 md:py-44 px-6">
+      <section className="relative py-24 md:py-32 px-6">
         <div className="max-w-[1000px] mx-auto rounded-[36px] relative overflow-hidden p-12 md:p-20 text-center"
           style={{
             border: '1px solid rgba(139,92,246,0.25)',
@@ -489,7 +513,7 @@ const BentoCard: React.FC<{ className?: string; src?: string; title: string; tag
       background: '#101018',
     }}>
     {src ? (
-      <img src={src} alt={title} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+      <img src={src} alt={title} loading="lazy" style={{ objectPosition: 'center top' }} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
     ) : (
       <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.15), transparent)' }} />
     )}

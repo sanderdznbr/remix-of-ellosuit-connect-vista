@@ -147,12 +147,12 @@ const Landing: React.FC = () => {
                style={{ background: 'radial-gradient(closest-side, rgba(139,92,246,0.18), transparent 70%)', filter: 'blur(40px)' }} />
         </div>
 
-        {/* 3D Interactive Backdrop — contained behind marquee only */}
+        {/* 3D Interactive Backdrop — small accent behind marquee */}
         <motion.div aria-hidden
-                    className="hidden lg:block absolute top-20 right-0 w-[46%] h-[80%] pointer-events-none z-0 overflow-hidden"
-                    style={{ opacity: canvasOpacity, mixBlendMode: 'screen',
-                             WebkitMaskImage: 'radial-gradient(ellipse at center, black 40%, transparent 72%)',
-                             maskImage: 'radial-gradient(ellipse at center, black 40%, transparent 72%)' }}>
+                    className="hidden lg:block absolute pointer-events-none z-0 overflow-hidden"
+                    style={{ opacity: canvasOpacity, top: '30%', right: '-6%', width: '520px', height: '520px',
+                             WebkitMaskImage: 'radial-gradient(circle at center, black 30%, transparent 65%)',
+                             maskImage: 'radial-gradient(circle at center, black 30%, transparent 65%)' }}>
           <Suspense fallback={null}>
             <HeroCanvas scrollY={scrollY} />
           </Suspense>

@@ -220,6 +220,28 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
+      {/* ─────────── STATS strip ─────────── */}
+      <section className="relative py-16 md:py-24 px-6">
+        <div className="max-w-[1100px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4 text-center">
+          {[
+            { n: '6M+', l: 'Criativos gerados' },
+            { n: '60+', l: 'Estilos curados' },
+            { n: '12k', l: 'Criadores ativos' },
+            { n: '4.9★', l: 'Avaliação média' },
+          ].map((s) => (
+            <div key={s.n}>
+              <div style={{ fontFamily: SERIF, fontWeight: 300, fontSize: 'clamp(2.2rem, 5vw, 3.5rem)', letterSpacing: '-0.02em', lineHeight: 1 }}
+                className="bg-clip-text text-transparent"
+                >
+                <span style={{ background: 'linear-gradient(180deg,#FFFFFF 0%,#A78BFA 120%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{s.n}</span>
+              </div>
+              <div className="mt-3 text-[11px] uppercase tracking-[0.25em]" style={{ color: 'rgba(236,234,244,0.4)' }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+
       {/* ─────────── BENTO — Estilos ─────────── */}
       <section id="estilos" className="relative py-20 md:py-28 px-6">
         <div className="max-w-[1240px] mx-auto">

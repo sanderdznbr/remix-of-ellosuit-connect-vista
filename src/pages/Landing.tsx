@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform, useSpring, useMotionValueEvent } from 'framer-motion';
 import { ArrowUpRight, Plus, Minus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
+
+const HeroCanvas = lazy(() => import('@/components/landing/HeroCanvas'));
 
 /* ─────────────────────────────────────────────────────────────
    ellocontent — Landing · Asymmetric Marquee (Editorial Noir)
@@ -22,6 +24,30 @@ const Landing: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [styles, setStyles] = useState<Style[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+
+  // ── Scroll orchestration ──
+  const heroRef = useRef<HTMLDivElement>(null);
+  const showcaseRef = useRef<HTMLDivElement>(null);
+  const scrollY = useRef(0); // 0..1 fed into R3F canvas
+
+  const { scrollYProgress } = useScroll();
+  const progressBar = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.3 });
+
+  const { scrollYProgress: heroProgress } = useScroll({
+    target: heroRef, offset: ['start start', 'end start'],
+  });
+  const heroY = useTransform(heroProgress, [0, 1], [0, -140]);
+  const heroOpacity = useTransform(heroProgress, [0, 0.85], [1, 0]);
+  const heroScale = useTransform(heroProgress, [0, 1], [1, 0.94]);
+  const canvasOpacity = useTransform(heroProgress, [0, 1], [0.55, 0.05]);
+
+  useMotionValueEvent(heroProgress, 'change', (v) => { scrollY.current = v; });
+
+  // Horizontal scroll rail
+  const { scrollYProgress: showcaseProgress } = useScroll({
+    target: showcaseRef, offset: ['start end', 'end start'],
+  });
+  const railX = useTransform(showcaseProgress, [0, 1], ['5%', '-45%']);
 
   const goCreate = () => navigate('/gerador-de-carrosseis');
   const goPlans = () => navigate('/precos');
@@ -108,21 +134,42 @@ const Landing: React.FC = () => {
             </button>
           </div>
         </div>
+        {/* Scroll progress line */}
+        <motion.div className="absolute bottom-0 left-0 h-[2px] origin-left"
+          style={{ scaleX: progressBar, background: 'linear-gradient(90deg,#8B5CF6,#C4B5FD,#8B5CF6)', width: '100%' }} />
       </header>
 
-      {/* HERO — Asymmetric Marquee */}
-      <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 px-6 md:px-12 lg:px-20">
+      {/* HERO — Asymmetric Marquee + 3D Orb */}
+      <section ref={heroRef} className="relative pt-32 pb-20 md:pt-40 md:pb-32 px-6 md:px-12 lg:px-20 min-h-[100vh]">
+        {/* Ambient */}
         <div aria-hidden className="absolute inset-0 -z-0 overflow-hidden">
           <div className="absolute top-40 left-1/3 w-[900px] h-[900px] rounded-full"
                style={{ background: 'radial-gradient(closest-side, rgba(139,92,246,0.22), transparent 70%)', filter: 'blur(60px)' }} />
         </div>
 
-        <div className="relative max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        {/* 3D Interactive Backdrop */}
+        <motion.div aria-hidden className="absolute inset-0 pointer-events-none z-0"
+                    style={{ opacity: canvasOpacity, mixBlendMode: 'screen' }}>
+          <Suspense fallback={null}>
+            <HeroCanvas scrollY={scrollY} />
+          </Suspense>
+          {/* Soft vignette to keep text legible */}
+          <div className="absolute inset-0" style={{
+            background: 'radial-gradient(ellipse at 30% 45%, rgba(5,5,5,0.85) 0%, rgba(5,5,5,0.4) 40%, transparent 70%)'
+          }} />
+        </motion.div>
+
+        <motion.div style={{ y: heroY, opacity: heroOpacity, scale: heroScale }}
+                    className="relative z-10 max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+
           {/* Left — editorial lockup */}
           <div className="lg:col-span-7 flex flex-col justify-between min-h-[640px]">
             <div className="mb-10 flex items-center gap-3 text-[11px] uppercase tracking-[0.3em]"
                  style={{ color: 'rgba(236,234,244,0.5)' }}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#8B5CF6' }} />
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#A78BFA' }} />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: '#8B5CF6' }} />
+              </span>
               Marketplace de estilos · ao vivo
             </div>
 
@@ -135,6 +182,7 @@ const Landing: React.FC = () => {
                 <span style={{ color: '#A78BFA' }}>editorial</span><br />
                 <span style={{ fontStyle: 'normal', fontWeight: 400 }}>redefinida.</span>
               </motion.h1>
+
 
               <div className="max-w-md space-y-8">
                 <p className="text-lg leading-relaxed font-light" style={{ color: 'rgba(236,234,244,0.6)' }}>
@@ -194,7 +242,7 @@ const Landing: React.FC = () => {
               Somente<br />estilos<br />curados
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* LOGOS */}
@@ -284,8 +332,8 @@ const Landing: React.FC = () => {
       </section>
 
       {/* SHOWCASE */}
-      <section id="showcase" className="relative py-24 md:py-32 px-6 md:px-12 lg:px-20">
-        <div className="max-w-[1400px] mx-auto">
+      <section id="showcase" ref={showcaseRef} className="relative py-24 md:py-32 overflow-hidden">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-12 lg:px-20">
           <div className="mb-16 flex items-end justify-between flex-wrap gap-6">
             <div>
               <div className="text-[11px] uppercase tracking-[0.3em] mb-4" style={{ color: '#A78BFA' }}>Showreel</div>
@@ -295,22 +343,31 @@ const Landing: React.FC = () => {
               </h2>
             </div>
             <p className="max-w-sm text-sm" style={{ color: 'rgba(236,234,244,0.5)' }}>
-              Um recorte real dos posts publicados nas últimas semanas por criadores usando ellocontent.
+              Role a página — o showreel corre na horizontal.
             </p>
           </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {posts.slice(0, 12).map((p) => (
-              <div key={p.id} className="relative aspect-[4/5] overflow-hidden group"
-                   style={{ background: '#101018', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <img src={p.cover_url} alt={p.title} loading="lazy"
-                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                     style={{ objectPosition: 'center top' }} />
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(5,5,5,0.85) 100%)' }} />
-              </div>
-            ))}
-          </div>
         </div>
+
+        {/* Horizontal scroll rail driven by page scroll */}
+        <motion.div style={{ x: railX }} className="flex gap-4 pl-6 md:pl-12 lg:pl-20 will-change-transform">
+          {posts.slice(0, 14).map((p, i) => (
+            <motion.div key={p.id}
+              whileHover={{ y: -10, rotate: i % 2 ? 1.2 : -1.2 }}
+              transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+              className="relative shrink-0 w-[260px] md:w-[320px] aspect-[4/5] overflow-hidden group"
+              style={{ background: '#101018', border: '1px solid rgba(255,255,255,0.08)',
+                       boxShadow: '0 30px 60px -30px rgba(139,92,246,0.35)' }}>
+              <img src={p.cover_url} alt={p.title} loading="lazy"
+                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                   style={{ objectPosition: 'center top' }} />
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 50%, rgba(5,5,5,0.9) 100%)' }} />
+              <div className="absolute bottom-4 left-4 right-4">
+                <p className="text-[10px] uppercase tracking-[0.25em] mb-1" style={{ color: '#C4B5FD' }}>№ {String(i + 1).padStart(2, '0')}</p>
+                <p className="text-sm truncate" style={{ fontFamily: SERIF, fontStyle: 'italic' }}>{p.title}</p>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
       </section>
 
       {/* PRICING TEASER */}

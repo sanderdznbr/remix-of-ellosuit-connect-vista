@@ -137,20 +137,6 @@ const Landing: React.FC = () => {
         </div>
 
         <div className="relative z-10 max-w-[1400px] mx-auto">
-          {/* Badge */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="flex justify-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full backdrop-blur-xl"
-                 style={{ border: '1px solid rgba(139,92,246,0.35)', background: 'rgba(139,92,246,0.08)' }}>
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#8B5CF6' }} />
-                <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: '#8B5CF6' }} />
-              </span>
-              <span className="text-[12px] font-semibold" style={{ color: '#C4B5FD' }}>
-                +12.400 carrosséis gerados esta semana
-              </span>
-            </div>
-          </motion.div>
 
           {/* Headline */}
           <motion.h1

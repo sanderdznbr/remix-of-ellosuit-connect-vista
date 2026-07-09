@@ -25,6 +25,30 @@ const Landing: React.FC = () => {
   const [styles, setStyles] = useState<Style[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
 
+  // ── Scroll orchestration ──
+  const heroRef = useRef<HTMLDivElement>(null);
+  const showcaseRef = useRef<HTMLDivElement>(null);
+  const scrollY = useRef(0); // 0..1 fed into R3F canvas
+
+  const { scrollYProgress } = useScroll();
+  const progressBar = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.3 });
+
+  const { scrollYProgress: heroProgress } = useScroll({
+    target: heroRef, offset: ['start start', 'end start'],
+  });
+  const heroY = useTransform(heroProgress, [0, 1], [0, -140]);
+  const heroOpacity = useTransform(heroProgress, [0, 0.85], [1, 0]);
+  const heroScale = useTransform(heroProgress, [0, 1], [1, 0.94]);
+  const canvasOpacity = useTransform(heroProgress, [0, 1], [1, 0.15]);
+
+  useMotionValueEvent(heroProgress, 'change', (v) => { scrollY.current = v; });
+
+  // Horizontal scroll rail
+  const { scrollYProgress: showcaseProgress } = useScroll({
+    target: showcaseRef, offset: ['start end', 'end start'],
+  });
+  const railX = useTransform(showcaseProgress, [0, 1], ['5%', '-45%']);
+
   const goCreate = () => navigate('/gerador-de-carrosseis');
   const goPlans = () => navigate('/precos');
   const goLogin = () => navigate('/auth');

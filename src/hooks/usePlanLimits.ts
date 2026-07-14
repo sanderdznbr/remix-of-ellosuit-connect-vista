@@ -220,9 +220,9 @@ export function usePlanLimits() {
         // ellocontent_subscriptions takes priority if active
         if (elloSub && elloSub.status === 'active') {
           const name = (elloSub.plan_name || '').toLowerCase();
-          if (name.includes('growth')) planKey = 'growth';
-          else if (name.includes('pro')) planKey = 'pro';
-          else if (name.includes('starter')) planKey = 'starter';
+          if (name.includes('growth') || name.includes('escala')) planKey = 'growth';
+          else if (name.includes('pro') || name.includes('estúdio') || name.includes('estudio')) planKey = 'pro';
+          else if (name.includes('starter') || name.includes('criador')) planKey = 'starter';
           else if (name.includes('enterprise')) planKey = 'enterprise';
           isActive = true;
         } else if (sub && sub.status === 'active') {

@@ -138,74 +138,96 @@ const Landing: React.FC = () => {
           }} />
         </div>
 
-        <div className="relative z-10 max-w-[1400px] mx-auto">
+        <div className="relative z-10 max-w-[1400px] mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
 
-          {/* Badge */}
+          {/* LEFT — Type + CTAs */}
+          <div className="relative z-10 w-full lg:w-3/5">
+            {/* Eyebrow badge */}
+            <motion.div
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+              className="mb-8 w-fit flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-[0.22em]"
+              style={{ border: '1px solid rgba(139,92,246,0.25)', background: 'rgba(139,92,246,0.08)', color: '#A78BFA' }}>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#8B5CF6' }} />
+                <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: '#8B5CF6' }} />
+              </span>
+              Carrosséis · Stories · Posts
+            </motion.div>
+
+            {/* Headline */}
+            <motion.h1
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
+              className="text-left"
+              style={{ ...DISPLAY, fontSize: 'clamp(3rem, 8.5vw, 7.5rem)' }}>
+              Chega de{' '}
+              <span style={{
+                background: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 45%, #F5F3FF 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>perder horas</span>{' '}
+              no Canva.
+            </motion.h1>
+
+            {/* CTAs */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
+              className="mt-10 flex flex-wrap items-center gap-4">
+              <button onClick={goCreate}
+                className="group inline-flex items-center gap-2 px-8 py-4 rounded-xl text-[15px] font-bold transition-all hover:scale-[1.03]"
+                style={{ background: '#8B5CF6', color: '#fff', boxShadow: '0 25px 70px -18px rgba(139,92,246,0.75)' }}>
+                Criar meu primeiro post grátis
+                <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </button>
+              <button onClick={goPlans}
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-[15px] font-semibold transition-colors hover:bg-white/5"
+                style={{ border: '1px solid rgba(255,255,255,0.14)', color: '#fff' }}>
+                Ver planos
+              </button>
+            </motion.div>
+
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.5 }}
+              className="mt-6 flex items-center gap-2 text-[12px]" style={{ color: 'rgba(245,245,247,0.5)' }}>
+              <ShieldCheck className="w-3.5 h-3.5" style={{ color: '#A78BFA' }} />
+              1 post cortesia · sem cartão · cancele quando quiser · PIX ou cartão
+            </motion.p>
+          </div>
+
+          {/* RIGHT — Floating cards */}
           <motion.div
-            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-            className="mx-auto mb-10 w-fit flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12px] font-medium"
-            style={{ border: '1px solid rgba(139,92,246,0.25)', background: 'rgba(139,92,246,0.08)', color: '#C4B5FD' }}>
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#A78BFA' }} />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: '#A78BFA' }} />
-            </span>
-            Gemini 3 Pro · rodando ao vivo
+            initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.9, delay: 0.2 }}
+            className="w-full lg:w-2/5 relative">
+            <div className="relative space-y-4 lg:rotate-[-6deg] lg:scale-105">
+              {/* Sub as detached glass card */}
+              <div className="relative z-20 p-7 md:p-8 rounded-3xl shadow-2xl"
+                   style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.10)' }}>
+                <p className="text-lg md:text-xl leading-relaxed" style={{ color: 'rgba(245,245,247,0.85)' }}>
+                  Descreva o tema, escolha um estilo editorial e publique um carrossel pronto — em <span className="font-bold" style={{ color: '#fff' }}>menos de 30 segundos</span>. Sem designer, sem briefing.
+                </p>
+              </div>
+
+              {/* Ornament glow */}
+              <div className="absolute -top-12 -right-12 -z-10 w-32 h-32 rounded-2xl rotate-12 opacity-30 blur-xl animate-pulse"
+                   style={{ background: '#8B5CF6' }} />
+
+              {/* Broken UI chip */}
+              <div className="ml-10 md:ml-14 p-4 rounded-2xl flex items-center gap-4"
+                   style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.08), transparent)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0"
+                     style={{ background: 'rgba(139,92,246,0.18)' }}>
+                  <Instagram className="w-5 h-5" style={{ color: '#A78BFA' }} />
+                </div>
+                <div className="space-y-2 flex-1">
+                  <div className="h-2 w-24 rounded" style={{ background: 'rgba(255,255,255,0.20)' }} />
+                  <div className="h-2 w-16 rounded" style={{ background: 'rgba(255,255,255,0.10)' }} />
+                </div>
+              </div>
+            </div>
           </motion.div>
-
-          {/* Eyebrow */}
-          <motion.p
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-center text-[11px] uppercase tracking-[0.32em] font-semibold mb-6"
-            style={{ color: 'rgba(167,139,250,0.85)' }}>
-            Carrosséis · Stories · Posts únicos
-          </motion.p>
-
-          {/* Headline */}
-          <motion.h1
-            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
-            className="text-center mx-auto max-w-[18ch]"
-            style={{ ...DISPLAY, fontSize: 'clamp(3rem, 9vw, 8.5rem)' }}>
-            Chega de perder horas{' '}
-            <span style={{
-              background: 'linear-gradient(120deg, #A78BFA 0%, #F5F3FF 50%, #8B5CF6 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}>no Canva.</span>
-          </motion.h1>
-
-          {/* Sub */}
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7, delay: 0.2 }}
-            className="mt-8 mx-auto max-w-2xl text-center text-lg md:text-xl leading-relaxed"
-            style={{ color: 'rgba(245,245,247,0.65)' }}>
-            Descreva o tema, escolha um estilo editorial e publique um carrossel pronto no Instagram — em menos de 30 segundos. Sem designer, sem briefing, sem retrabalho.
-          </motion.p>
-
-          {/* CTAs */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.35 }}
-            className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button onClick={goCreate}
-              className="group inline-flex items-center gap-2 px-8 py-4 rounded-full text-[15px] font-semibold transition-transform hover:scale-[1.03]"
-              style={{ background: '#8B5CF6', color: '#fff', boxShadow: '0 25px 70px -18px rgba(139,92,246,0.75)' }}>
-              Criar meu primeiro post grátis
-              <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </button>
-            <button onClick={goPlans}
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-[15px] font-semibold backdrop-blur-md transition-colors hover:bg-white/10"
-              style={{ border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.04)', color: '#fff' }}>
-              Ver planos
-            </button>
-          </motion.div>
-
-          <p className="mt-6 flex items-center justify-center gap-2 text-center text-[12px]" style={{ color: 'rgba(245,245,247,0.5)' }}>
-            <ShieldCheck className="w-3.5 h-3.5" style={{ color: '#A78BFA' }} />
-            1 post cortesia · sem cartão · cancele quando quiser · PIX ou cartão
-          </p>
-
-
 
         </div>
       </section>
+
+
 
 
       {/* ESTILOS */}

@@ -176,11 +176,8 @@ const Landing: React.FC = () => {
               </button>
             </motion.div>
 
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.5 }}
-              className="mt-6 flex items-center gap-2 text-[12px]" style={{ color: 'rgba(245,245,247,0.5)' }}>
-              <ShieldCheck className="w-3.5 h-3.5" style={{ color: '#A78BFA' }} />
-              1 post cortesia · sem cartão · cancele quando quiser · PIX ou cartão
-            </motion.p>
+
+
           </div>
 
           {/* RIGHT — Floating cards */}

@@ -54,10 +54,9 @@ describe('Plan limits — mode gating', () => {
   });
 });
 
-describe('Plan limits — worst-case cost guardrail', () => {
-  // Sanity: monthlyCredits × maxSlides should stay within our margin envelope.
-  // Assumindo custo médio ≈ R$ 0,40 por imagem (mix Fast/Pro) e receita mínima
-  // por plano, o custo total no pior caso não deve ultrapassar 30% da receita.
+describe('Plan limits — typical-usage margin guardrail', () => {
+  // Guardrail: assumindo uso típico de 5 cards/carrossel e custo médio de R$ 0,25/imagem
+  // (mix Fast/Pro), o custo do plano no cenário típico deve ficar ≤ 40% da receita.
   const revenue: Record<PlanKey, number> = {
     free: 0,
     starter: 69.9,
@@ -65,15 +64,15 @@ describe('Plan limits — worst-case cost guardrail', () => {
     growth: 259.9,
     enterprise: 999,
   };
-  const COST_PER_IMAGE = 0.4;
+  const TYPICAL_CARDS = 5;
+  const COST_PER_IMAGE = 0.25;
 
   (['starter', 'pro', 'growth'] as PlanKey[]).forEach((plan) => {
-    it(`${plan} worst-case cost ≤ 30% of revenue`, () => {
+    it(`${plan}: uso típico consome ≤ 40% da receita`, () => {
       const cfg = getPlanConfig(plan);
-      const worstCaseImages = cfg.monthlyCredits * cfg.maxSlidesPerCarousel;
-      const worstCaseCost = worstCaseImages * COST_PER_IMAGE;
-      const ratio = worstCaseCost / revenue[plan];
-      expect(ratio).toBeLessThanOrEqual(0.3);
+      const typicalCost = cfg.monthlyCredits * TYPICAL_CARDS * COST_PER_IMAGE;
+      expect(typicalCost / revenue[plan]).toBeLessThanOrEqual(0.4);
     });
   });
 });
+

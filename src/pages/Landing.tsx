@@ -427,9 +427,9 @@ const Landing: React.FC = () => {
 
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { n: 'Starter', p: 'R$ 89,90', c: '50 créditos/mês', f: ['Todos os estilos gratuitos', 'Downloads em alta', 'Suporte por chat'] },
-              { n: 'Pro', p: 'R$ 159,90', c: '100 créditos/mês', f: ['Marketplace completo', 'Publicação Instagram', 'Fotos reais + web'], hi: true },
-              { n: 'Growth', p: 'R$ 269,90', c: '200 créditos/mês', f: ['Carrosséis até 15 cards', 'Trends & niche packs', 'Prioridade na fila'] },
+              { n: 'Criador', p: 'R$ 59,90', c: '10 criativos/mês', f: ['Templates gratuitos', 'Modo Rápido + ElloIA Flash', 'Galeria de marca 1GB', 'Exportação PNG, JPG e ZIP'] },
+              { n: 'Estúdio', p: 'R$ 119,90', c: '30 criativos/mês', f: ['Modo Personalizado (cores, fontes, roteiro)', 'ElloIA Pro + Rosto Pessoal', 'Templates premium liberados', 'Galeria de marca 5GB'], hi: true },
+              { n: 'Escala', p: 'R$ 199,90', c: '80 criativos/mês', f: ['Modo Extreme — visão livre pra IA', 'Carrosséis com animação e vídeo', 'Fotos realistas com IA', 'Galeria de marca 10GB'] },
             ].map((pl) => (
               <div key={pl.n} className="relative p-8 flex flex-col rounded-2xl"
                    style={{
@@ -479,7 +479,7 @@ const Landing: React.FC = () => {
             {[
               { q: 'Preciso saber design para usar?', a: 'Não. Escolha um estilo curado, descreva o tema e a ellocontent monta o carrossel — tipografia, hierarquia e paleta prontas.' },
               { q: 'Posso usar minhas próprias fotos?', a: 'Sim. Faça upload de rosto, produto e logo — a IA prioriza suas referências e mantém fidelidade visual.' },
-              { q: 'Como funcionam os créditos?', a: 'Post simples custa 1 crédito, avançado/extreme custa 2, e usar seu rosto adiciona +4. Planos renovam mensalmente e você pode comprar créditos avulsos via PIX ou cartão.' },
+              { q: 'Como funcionam os criativos?', a: 'Cada geração completa (post ou carrossel) consome 1 criativo. Os planos renovam mensalmente e você pode comprar pacotes avulsos via PIX ou cartão a qualquer momento.' },
               { q: 'Publica direto no Instagram?', a: 'Sim, via integração oficial Meta. Você conecta sua conta Business e agenda a publicação sem sair da plataforma.' },
               { q: 'Posso cancelar quando quiser?', a: 'Sim, sem multa. Créditos acumulados continuam válidos mesmo após o downgrade.' },
             ].map((item, i) => (

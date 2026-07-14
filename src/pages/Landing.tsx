@@ -140,26 +140,34 @@ const Landing: React.FC = () => {
 
         <div className="relative z-10 max-w-[1400px] mx-auto">
 
+          {/* Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+            className="mx-auto mb-8 w-fit flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12px] font-medium"
+            style={{ border: '1px solid rgba(139,92,246,0.25)', background: 'rgba(139,92,246,0.08)', color: '#C4B5FD' }}>
+            <Star className="w-3 h-3 fill-current" />
+            Para criadores, afiliados e agências que postam todo dia
+          </motion.div>
 
           {/* Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
-            className="text-center mx-auto max-w-[14ch]"
+            className="text-center mx-auto max-w-[16ch]"
             style={{ ...DISPLAY, fontSize: 'clamp(3rem, 9vw, 8.5rem)' }}>
-            Carrosséis que{' '}
+            Chega de perder horas{' '}
             <span style={{
               background: 'linear-gradient(120deg, #A78BFA 0%, #F5F3FF 50%, #8B5CF6 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
-            }}>convertem.</span>
+            }}>no Canva.</span>
           </motion.h1>
 
           {/* Sub */}
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7, delay: 0.2 }}
-            className="mt-8 mx-auto max-w-xl text-center text-lg md:text-xl leading-relaxed"
-            style={{ color: 'rgba(245,245,247,0.62)' }}>
-            O marketplace de estilos editoriais para Instagram. Descreva o tema, escolha um preset e publique — sem abrir o Photoshop.
+            className="mt-8 mx-auto max-w-2xl text-center text-lg md:text-xl leading-relaxed"
+            style={{ color: 'rgba(245,245,247,0.65)' }}>
+            Descreva o tema, escolha um estilo editorial e publique um carrossel pronto no Instagram — em menos de 30 segundos. Sem designer, sem briefing, sem retrabalho.
           </motion.p>
 
           {/* CTAs */}
@@ -168,23 +176,43 @@ const Landing: React.FC = () => {
             <button onClick={goCreate}
               className="group inline-flex items-center gap-2 px-8 py-4 rounded-full text-[15px] font-semibold transition-transform hover:scale-[1.03]"
               style={{ background: '#8B5CF6', color: '#fff', boxShadow: '0 25px 70px -18px rgba(139,92,246,0.75)' }}>
-              Criar meu primeiro post
+              Criar meu primeiro post grátis
               <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </button>
-            <button onClick={() => document.getElementById('showcase')?.scrollIntoView({ behavior: 'smooth' })}
+            <button onClick={goPlans}
               className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-[15px] font-semibold backdrop-blur-md transition-colors hover:bg-white/10"
               style={{ border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.04)', color: '#fff' }}>
-              Ver showcase
+              Ver planos
             </button>
           </motion.div>
 
-          <p className="mt-6 text-center text-[12px]" style={{ color: 'rgba(245,245,247,0.42)' }}>
-            Grátis para começar · sem cartão · 1 post cortesia
+          <p className="mt-6 flex items-center justify-center gap-2 text-center text-[12px]" style={{ color: 'rgba(245,245,247,0.5)' }}>
+            <ShieldCheck className="w-3.5 h-3.5" style={{ color: '#A78BFA' }} />
+            1 post cortesia · sem cartão · cancele quando quiser · pagamento em BRL (PIX/cartão)
           </p>
 
+          {/* Prova social numérica */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5 }}
+            className="mt-20 mx-auto max-w-4xl grid grid-cols-2 md:grid-cols-4 gap-px rounded-2xl overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            {[
+              { icon: Sparkles, k: '+12.400', v: 'Carrosséis gerados' },
+              { icon: Users, k: '+3.200', v: 'Criadores ativos' },
+              { icon: Clock, k: '< 30s', v: 'Do prompt ao post' },
+              { icon: Star, k: '4.9/5', v: 'Avaliação dos criadores' },
+            ].map((m) => (
+              <div key={m.v} className="px-4 py-6 text-center flex flex-col items-center gap-2" style={{ background: '#0A0A0F' }}>
+                <m.icon className="w-4 h-4" style={{ color: '#A78BFA' }} />
+                <div className="text-[20px] font-bold tracking-tight" style={{ color: '#F5F5F7' }}>{m.k}</div>
+                <div className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'rgba(245,245,247,0.45)' }}>{m.v}</div>
+              </div>
+            ))}
+          </motion.div>
 
         </div>
       </section>
+
 
       {/* ESTILOS */}
       <section id="estilos" className="relative py-24 md:py-32 overflow-hidden">

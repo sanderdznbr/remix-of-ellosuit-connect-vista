@@ -182,22 +182,6 @@ const Landing: React.FC = () => {
             Grátis para começar · sem cartão · 1 post cortesia
           </p>
 
-          {/* Meta strip */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5 }}
-            className="mt-20 mx-auto max-w-3xl grid grid-cols-3 gap-px rounded-2xl overflow-hidden"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            {[
-              { k: '4:5 · 1:1 · 9:16', v: 'Formatos nativos' },
-              { k: '< 30s', v: 'Do prompt ao post' },
-              { k: 'Instagram API', v: 'Publicação direta' },
-            ].map((m) => (
-              <div key={m.v} className="px-4 py-5 text-center" style={{ background: '#0A0A0F' }}>
-                <div className="text-[15px] font-semibold tracking-tight" style={{ color: '#F5F5F7' }}>{m.k}</div>
-                <div className="mt-1 text-[11px] uppercase tracking-[0.18em]" style={{ color: 'rgba(245,245,247,0.42)' }}>{m.v}</div>
-              </div>
-            ))}
-          </motion.div>
 
         </div>
       </section>

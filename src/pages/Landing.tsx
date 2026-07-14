@@ -228,7 +228,6 @@ const Landing: React.FC = () => {
       </section>
 
 
-      </section>
 
 
       {/* ESTILOS */}

@@ -36,9 +36,14 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const { requireAuthenticatedUser } = await import('../_shared/requireAuth.ts');
+  const auth = await requireAuthenticatedUser(req, corsHeaders);
+  if (!auth.ok) return auth.response;
+
   try {
     const body = await req.json();
     const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, username, imageModel, negativePrompt, fidelity, marketplaceStyleConfig, promptContexts } = body;
+
 
     // ===== INSTAGRAM PROFILE FETCH =====
     if (action === 'instagram-profile') {

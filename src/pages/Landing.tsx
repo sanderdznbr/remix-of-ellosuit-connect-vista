@@ -140,17 +140,6 @@ const Landing: React.FC = () => {
 
         <div className="relative z-10 max-w-[1400px] mx-auto">
 
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-            className="mx-auto mb-8 w-fit flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12px] font-medium"
-            style={{ border: '1px solid rgba(139,92,246,0.25)', background: 'rgba(139,92,246,0.08)', color: '#C4B5FD' }}>
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#A78BFA' }} />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: '#A78BFA' }} />
-            </span>
-            Novo · Gemini 3 Pro rodando ao vivo
-          </motion.div>
 
           {/* Headline */}
           <motion.h1
@@ -193,22 +182,6 @@ const Landing: React.FC = () => {
             Grátis para começar · sem cartão · 1 post cortesia
           </p>
 
-          {/* Meta strip */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5 }}
-            className="mt-20 mx-auto max-w-3xl grid grid-cols-3 gap-px rounded-2xl overflow-hidden"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            {[
-              { k: '4:5 · 1:1 · 9:16', v: 'Formatos nativos' },
-              { k: '< 30s', v: 'Do prompt ao post' },
-              { k: 'Instagram API', v: 'Publicação direta' },
-            ].map((m) => (
-              <div key={m.v} className="px-4 py-5 text-center" style={{ background: '#0A0A0F' }}>
-                <div className="text-[15px] font-semibold tracking-tight" style={{ color: '#F5F5F7' }}>{m.k}</div>
-                <div className="mt-1 text-[11px] uppercase tracking-[0.18em]" style={{ color: 'rgba(245,245,247,0.42)' }}>{m.v}</div>
-              </div>
-            ))}
-          </motion.div>
 
         </div>
       </section>

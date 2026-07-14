@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
-import { ArrowUpRight, Plus, Minus, Sparkles, Zap, Instagram, Check } from 'lucide-react';
+import { ArrowUpRight, Plus, Minus, Sparkles, Zap, Instagram, Check, Star, Users, Clock, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 

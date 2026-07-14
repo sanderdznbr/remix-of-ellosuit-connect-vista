@@ -74,7 +74,7 @@ const PLAN_CONFIGS: Record<PlanKey, Omit<PlanLimits, 'isActive'>> = {
   },
   starter: {
     planKey: 'starter',
-    planLabel: 'Starter',
+    planLabel: 'Criador',
     monthlyCredits: 10,
     allowSimple: true,
     allowAdvanced: false,
@@ -95,12 +95,12 @@ const PLAN_CONFIGS: Record<PlanKey, Omit<PlanLimits, 'isActive'>> = {
   },
   pro: {
     planKey: 'pro',
-    planLabel: 'Pro',
-    monthlyCredits: 30,
+    planLabel: 'Estúdio',
+    monthlyCredits: 25,
     allowSimple: true,
     allowAdvanced: true,
     allowExtreme: false,
-    maxSlidesPerCarousel: 5,
+    maxSlidesPerCarousel: 8,
     allowContinuousMode: true,
     allowElloIAPro: true,
     allowElloIAFace: true,
@@ -116,12 +116,12 @@ const PLAN_CONFIGS: Record<PlanKey, Omit<PlanLimits, 'isActive'>> = {
   },
   growth: {
     planKey: 'growth',
-    planLabel: 'Growth',
-    monthlyCredits: 80,
+    planLabel: 'Escala',
+    monthlyCredits: 60,
     allowSimple: true,
     allowAdvanced: true,
     allowExtreme: true,
-    maxSlidesPerCarousel: 5,
+    maxSlidesPerCarousel: 10,
     allowContinuousMode: true,
     allowElloIAPro: true,
     allowElloIAFace: true,
@@ -142,7 +142,7 @@ const PLAN_CONFIGS: Record<PlanKey, Omit<PlanLimits, 'isActive'>> = {
     allowSimple: true,
     allowAdvanced: true,
     allowExtreme: true,
-    maxSlidesPerCarousel: 5,
+    maxSlidesPerCarousel: 15,
     allowContinuousMode: true,
     allowElloIAPro: true,
     allowElloIAFace: true,
@@ -220,9 +220,9 @@ export function usePlanLimits() {
         // ellocontent_subscriptions takes priority if active
         if (elloSub && elloSub.status === 'active') {
           const name = (elloSub.plan_name || '').toLowerCase();
-          if (name.includes('growth')) planKey = 'growth';
-          else if (name.includes('pro')) planKey = 'pro';
-          else if (name.includes('starter')) planKey = 'starter';
+          if (name.includes('growth') || name.includes('escala')) planKey = 'growth';
+          else if (name.includes('pro') || name.includes('estúdio') || name.includes('estudio')) planKey = 'pro';
+          else if (name.includes('starter') || name.includes('criador')) planKey = 'starter';
           else if (name.includes('enterprise')) planKey = 'enterprise';
           isActive = true;
         } else if (sub && sub.status === 'active') {

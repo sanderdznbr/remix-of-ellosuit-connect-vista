@@ -395,7 +395,7 @@ const Landing: React.FC = () => {
           </div>
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { t: 'IA de última geração', d: 'Rodamos Gemini 3 Pro para gerar textos, imagens e composições editoriais — não um template genérico com sua foto colada por cima.' },
+              { t: 'IA editorial de verdade', d: 'A ellocontent gera texto, imagem e composição juntos — não é um template com sua foto colada por cima. Cada slide sai com hierarquia, paleta e ritmo pensados.' },
               { t: 'Marketplace de estilos', d: 'Presets curados por designers reais. Tipografia, paleta e ritmo já pensados por nicho — do editorial minimalista ao streetwear.' },
               { t: 'Publica no Instagram', d: 'Integração oficial Meta. Conecta a conta Business e agenda o carrossel sem sair da plataforma. Sem plugin, sem gambiarra.' },
             ].map((f) => (
@@ -427,9 +427,9 @@ const Landing: React.FC = () => {
 
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { n: 'Starter', p: 'R$ 47', c: '50 créditos/mês', f: ['Todos os estilos gratuitos', 'Downloads em alta', 'Suporte por chat'] },
-              { n: 'Pro', p: 'R$ 87', c: '100 créditos/mês', f: ['Marketplace completo', 'Publicação Instagram', 'Fotos reais + web'], hi: true },
-              { n: 'Growth', p: 'R$ 147', c: '200 créditos/mês', f: ['Carrosséis até 15 cards', 'Trends & niche packs', 'Prioridade na fila'] },
+              { n: 'Starter', p: 'R$ 89,90', c: '50 créditos/mês', f: ['Todos os estilos gratuitos', 'Downloads em alta', 'Suporte por chat'] },
+              { n: 'Pro', p: 'R$ 159,90', c: '100 créditos/mês', f: ['Marketplace completo', 'Publicação Instagram', 'Fotos reais + web'], hi: true },
+              { n: 'Growth', p: 'R$ 269,90', c: '200 créditos/mês', f: ['Carrosséis até 15 cards', 'Trends & niche packs', 'Prioridade na fila'] },
             ].map((pl) => (
               <div key={pl.n} className="relative p-8 flex flex-col rounded-2xl"
                    style={{
@@ -479,7 +479,7 @@ const Landing: React.FC = () => {
             {[
               { q: 'Preciso saber design para usar?', a: 'Não. Escolha um estilo curado, descreva o tema e a ellocontent monta o carrossel — tipografia, hierarquia e paleta prontas.' },
               { q: 'Posso usar minhas próprias fotos?', a: 'Sim. Faça upload de rosto, produto e logo — a IA prioriza suas referências e mantém fidelidade visual.' },
-              { q: 'Como funcionam os créditos?', a: 'Cada carrossel custa entre 1 e 2 créditos por card. Planos renovam mensalmente e créditos avulsos ficam disponíveis para top-up via PIX ou cartão.' },
+              { q: 'Como funcionam os créditos?', a: 'Post simples custa 1 crédito, avançado/extreme custa 2, e usar seu rosto adiciona +4. Planos renovam mensalmente e você pode comprar créditos avulsos via PIX ou cartão.' },
               { q: 'Publica direto no Instagram?', a: 'Sim, via integração oficial Meta. Você conecta sua conta Business e agenda a publicação sem sair da plataforma.' },
               { q: 'Posso cancelar quando quiser?', a: 'Sim, sem multa. Créditos acumulados continuam válidos mesmo após o downgrade.' },
             ].map((item, i) => (

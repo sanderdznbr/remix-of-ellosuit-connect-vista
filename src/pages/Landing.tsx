@@ -415,7 +415,11 @@ const Landing: React.FC = () => {
             <h2 className="mx-auto" style={{ ...DISPLAY, fontSize: 'clamp(2rem, 5vw, 4rem)' }}>
               Preço simples.<br /><span style={{ color: '#A78BFA' }}>Sem surpresas.</span>
             </h2>
+            <p className="mt-6 mx-auto max-w-xl text-[15px]" style={{ color: 'rgba(245,245,247,0.55)' }}>
+              Menos que 1 hora de freelancer por mês. Cancele quando quiser — créditos acumulados continuam válidos.
+            </p>
           </div>
+
 
           <div className="grid md:grid-cols-3 gap-4">
             {[

@@ -11,24 +11,26 @@ import { toast } from 'sonner';
 import TrialBanner from '@/components/TrialBanner';
 
 // Prices: annual = billed yearly (per month), monthly = billed monthly
+// Pricing calibrated for ~70% gross margin over Lovable AI Gateway image costs
+// (mix Fast/Pro, média 4–5 imagens por criativo, custo médio ≈ R$1,50/criativo)
 const PLAN_CONFIG: Record<string, {
   label: string;
   annualPrice: number;
   monthlyPrice: number;
   credits: number;
 }> = {
-  starter: { label: 'Starter', annualPrice: 49.90, monthlyPrice: 59.90, credits: 10 },
-  pro: { label: 'Pro', annualPrice: 99.90, monthlyPrice: 119.90, credits: 30 },
-  growth: { label: 'Growth', annualPrice: 169.90, monthlyPrice: 199.90, credits: 80 },
+  starter: { label: 'Criador', annualPrice: 69.90, monthlyPrice: 89.90, credits: 10 },
+  pro: { label: 'Estúdio', annualPrice: 139.90, monthlyPrice: 179.90, credits: 25 },
+  growth: { label: 'Escala', annualPrice: 259.90, monthlyPrice: 329.90, credits: 60 },
 };
 
-// Per-criativo pricing by plan
+// Per-criativo pricing by plan (avulso ~ 40% acima do preço unitário do plano)
 const CREDIT_UNIT_PRICE: Record<string, number> = {
-  starter: 5.90,
-  pro: 4.90,
-  growth: 3.90,
-  enterprise: 3.90,
-  free: 6.90,
+  starter: 10.90,
+  pro: 8.90,
+  growth: 6.90,
+  enterprise: 6.90,
+  free: 12.90,
 };
 
 const CREDIT_PACKAGES = [5, 10, 20, 50];
@@ -42,9 +44,9 @@ function getCreditTopups(planKey: string) {
 }
 
 const GIFT_PACKAGES = [
-  { credits: 10, price: 59.90, label: '10 Criativos', description: '10 gerações completas' },
-  { credits: 30, price: 149.90, label: '30 Criativos', description: '30 gerações completas' },
-  { credits: 50, price: 199.90, label: '50 Criativos', description: '50 gerações completas' },
+  { credits: 10, price: 109.90, label: '10 Criativos', description: '10 gerações completas' },
+  { credits: 25, price: 219.90, label: '25 Criativos', description: '25 gerações completas' },
+  { credits: 60, price: 419.90, label: '60 Criativos', description: '60 gerações completas' },
 ];
 
 interface PlanDef {

@@ -143,16 +143,27 @@ const Landing: React.FC = () => {
           {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-            className="mx-auto mb-8 w-fit flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12px] font-medium"
+            className="mx-auto mb-10 w-fit flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12px] font-medium"
             style={{ border: '1px solid rgba(139,92,246,0.25)', background: 'rgba(139,92,246,0.08)', color: '#C4B5FD' }}>
-            <Star className="w-3 h-3 fill-current" />
-            Para criadores, afiliados e agências que postam todo dia
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#A78BFA' }} />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: '#A78BFA' }} />
+            </span>
+            Gemini 3 Pro · rodando ao vivo
           </motion.div>
+
+          {/* Eyebrow */}
+          <motion.p
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-center text-[11px] uppercase tracking-[0.32em] font-semibold mb-6"
+            style={{ color: 'rgba(167,139,250,0.85)' }}>
+            Carrosséis · Stories · Posts únicos
+          </motion.p>
 
           {/* Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
-            className="text-center mx-auto max-w-[16ch]"
+            className="text-center mx-auto max-w-[18ch]"
             style={{ ...DISPLAY, fontSize: 'clamp(3rem, 9vw, 8.5rem)' }}>
             Chega de perder horas{' '}
             <span style={{
@@ -188,27 +199,10 @@ const Landing: React.FC = () => {
 
           <p className="mt-6 flex items-center justify-center gap-2 text-center text-[12px]" style={{ color: 'rgba(245,245,247,0.5)' }}>
             <ShieldCheck className="w-3.5 h-3.5" style={{ color: '#A78BFA' }} />
-            1 post cortesia · sem cartão · cancele quando quiser · pagamento em BRL (PIX/cartão)
+            1 post cortesia · sem cartão · cancele quando quiser · PIX ou cartão
           </p>
 
-          {/* Prova social numérica */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5 }}
-            className="mt-20 mx-auto max-w-4xl grid grid-cols-2 md:grid-cols-4 gap-px rounded-2xl overflow-hidden"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            {[
-              { icon: Sparkles, k: '+12.400', v: 'Carrosséis gerados' },
-              { icon: Users, k: '+3.200', v: 'Criadores ativos' },
-              { icon: Clock, k: '< 30s', v: 'Do prompt ao post' },
-              { icon: Star, k: '4.9/5', v: 'Avaliação dos criadores' },
-            ].map((m) => (
-              <div key={m.v} className="px-4 py-6 text-center flex flex-col items-center gap-2" style={{ background: '#0A0A0F' }}>
-                <m.icon className="w-4 h-4" style={{ color: '#A78BFA' }} />
-                <div className="text-[20px] font-bold tracking-tight" style={{ color: '#F5F5F7' }}>{m.k}</div>
-                <div className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'rgba(245,245,247,0.45)' }}>{m.v}</div>
-              </div>
-            ))}
-          </motion.div>
+
 
         </div>
       </section>

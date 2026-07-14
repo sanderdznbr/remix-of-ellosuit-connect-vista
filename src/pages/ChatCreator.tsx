@@ -814,7 +814,7 @@ const ChatCreator: React.FC = () => {
       return <StyleSliderWidget styles={styles} topic={brief.topic || ''} onPick={handleStylePick} />;
     }
     if (msg.widget === 'content_type_picker') {
-      return <ContentTypePickerWidget onPick={handleContentTypePick} />;
+      return <ContentTypePickerWidget onPick={handleContentTypePick} selectedType={brief.contentType as any} selectedCards={brief.cardCount} />;
     }
     if (msg.widget === 'format_picker') {
       return <FormatPickerWidget onPick={handleFormatPick} />;
@@ -1457,10 +1457,17 @@ const StyleGalleryModal: React.FC<{
 };
 
 
-const ContentTypePickerWidget: React.FC<{ onPick: (type: 'single' | 'carousel', cards?: number) => void }> = ({ onPick }) => {
+const ContentTypePickerWidget: React.FC<{ onPick: (type: 'single' | 'carousel', cards?: number) => void; selectedType?: 'single' | 'carousel' | null; selectedCards?: number | null }> = ({ onPick, selectedType, selectedCards }) => {
   const [carouselCards, setCarouselCards] = useState<number | null>(null);
+  const locked = !!selectedType && !(selectedType === 'carousel' && !selectedCards);
 
-  if (carouselCards !== null) {
+  const baseCard = "group relative flex items-start gap-3 p-4 rounded-2xl border transition-all text-left";
+  const idleCard = "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12]";
+  const activeCard = "border-violet-400/60 bg-violet-500/10 ring-2 ring-violet-500/30";
+  const dimCard = "border-white/[0.04] bg-white/[0.01] opacity-40";
+  const iconCls = "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.06] bg-white/[0.03] group-hover:border-violet-400/30 group-hover:bg-violet-500/10 transition-colors";
+
+  if (carouselCards !== null && !locked) {
     return (
       <div className="space-y-2.5 max-w-md">
         <div className="text-xs text-white/60 mb-1">Quantos slides?</div>
@@ -1482,11 +1489,16 @@ const ContentTypePickerWidget: React.FC<{ onPick: (type: 'single' | 'carousel', 
     );
   }
 
-  const cardCls = "group relative flex items-start gap-3 p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all text-left";
-  const iconCls = "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.06] bg-white/[0.03] group-hover:border-violet-400/30 group-hover:bg-violet-500/10 transition-colors";
+  const singleActive = selectedType === 'single';
+  const carouselActive = selectedType === 'carousel';
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md w-full">
-      <button onClick={() => onPick('single')} className={cardCls}>
+      <button
+        onClick={() => !locked && onPick('single')}
+        disabled={locked}
+        className={`${baseCard} ${singleActive ? activeCard : locked ? dimCard : idleCard} ${locked ? 'cursor-not-allowed' : ''}`}
+      >
         <div className={iconCls}>
           <ImageIcon className="h-4 w-4 text-white/70 group-hover:text-violet-300 transition-colors" />
         </div>
@@ -1494,15 +1506,29 @@ const ContentTypePickerWidget: React.FC<{ onPick: (type: 'single' | 'carousel', 
           <div className="text-[13px] font-medium text-white/90">Post único</div>
           <div className="text-[11px] text-white/40 mt-0.5 leading-snug">Uma única arte impactante</div>
         </div>
+        {singleActive && (
+          <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center">
+            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          </div>
+        )}
       </button>
-      <button onClick={() => setCarouselCards(5)} className={cardCls}>
+      <button
+        onClick={() => !locked && setCarouselCards(5)}
+        disabled={locked}
+        className={`${baseCard} ${carouselActive ? activeCard : locked ? dimCard : idleCard} ${locked ? 'cursor-not-allowed' : ''}`}
+      >
         <div className={iconCls}>
           <Layers className="h-4 w-4 text-white/70 group-hover:text-violet-300 transition-colors" />
         </div>
         <div className="min-w-0">
-          <div className="text-[13px] font-medium text-white/90">Carrossel</div>
+          <div className="text-[13px] font-medium text-white/90">Carrossel{carouselActive && selectedCards ? ` (${selectedCards})` : ''}</div>
           <div className="text-[11px] text-white/40 mt-0.5 leading-snug">Vários slides pra contar uma história</div>
         </div>
+        {carouselActive && (
+          <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center">
+            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          </div>
+        )}
       </button>
     </div>
   );

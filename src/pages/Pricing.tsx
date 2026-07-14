@@ -136,7 +136,7 @@ const plans: PlanDef[] = [
     monthlyPrice: 'Sob consulta',
     credits: 'Volume e criativos sob medida',
     badge: null,
-    includedLabel: 'Tudo do Growth, mais:',
+    includedLabel: 'Tudo do Escala, mais:',
     isEnterprise: true,
     features: [],
     enterpriseSections: [

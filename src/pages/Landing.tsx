@@ -275,9 +275,16 @@ const Landing: React.FC = () => {
 
 
       {/* COMO FUNCIONA */}
-      <section id="como" className="relative py-24 md:py-32 px-6 md:px-10"
-               style={{ background: 'linear-gradient(180deg, transparent, rgba(139,92,246,0.04), transparent)' }}>
-        <div className="max-w-[1200px] mx-auto">
+      <section id="como" className="relative py-24 md:py-32 px-6 md:px-10 overflow-hidden">
+        {/* Ambient glow */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] rounded-full"
+               style={{ background: 'radial-gradient(ellipse, rgba(139,92,246,0.18), transparent 65%)', filter: 'blur(80px)' }} />
+          <div className="absolute bottom-0 right-[10%] w-[400px] h-[400px] rounded-full"
+               style={{ background: 'radial-gradient(circle, rgba(167,139,250,0.12), transparent 70%)', filter: 'blur(70px)' }} />
+        </div>
+
+        <div className="relative z-10 max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
             <div className="text-[11px] uppercase tracking-[0.25em] mb-4 font-semibold" style={{ color: '#A78BFA' }}>Como funciona</div>
             <h2 className="mx-auto max-w-3xl" style={{ ...DISPLAY, fontSize: 'clamp(2rem, 5vw, 4rem)' }}>
@@ -285,31 +292,51 @@ const Landing: React.FC = () => {
             </h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-3 gap-5">
             {[
-              { n: '01', icon: Sparkles, t: 'Descreva o tema', d: 'Escreva uma ideia, cole um roteiro ou mencione um prompt salvo com @. A IA entende contexto de marca.' },
-              { n: '02', icon: Zap, t: 'Escolha um estilo', d: 'Selecione um dos presets editoriais — ou deixe a curadoria sugerir o mais adequado ao seu nicho.' },
-              { n: '03', icon: Instagram, t: 'Publique', d: 'Baixe em alta resolução, exporte em ZIP ou publique direto no Instagram via integração oficial.' },
+              { n: '01', t: 'Descreva o tema', d: 'Escreva uma ideia, cole um roteiro ou mencione um prompt salvo com @. A IA entende contexto de marca.' },
+              { n: '02', t: 'Escolha um estilo', d: 'Selecione um dos presets editoriais — ou deixe a curadoria sugerir o mais adequado ao seu nicho.' },
+              { n: '03', t: 'Publique', d: 'Baixe em alta resolução, exporte em ZIP ou publique direto no Instagram via integração oficial.' },
             ].map((s, i) => (
               <motion.div key={s.n}
                 initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: i * 0.1 }}
-                className="relative p-7 rounded-2xl group"
-                style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
-                <div className="flex items-center justify-between mb-8">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                       style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}>
-                    <s.icon className="w-4 h-4" style={{ color: '#A78BFA' }} />
-                  </div>
-                  <span className="text-[13px] font-mono font-semibold" style={{ color: 'rgba(245,245,247,0.3)' }}>{s.n}</span>
+                whileHover={{ y: -4 }}
+                className="group relative p-8 rounded-3xl overflow-hidden backdrop-blur-2xl"
+                style={{
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  background: 'linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 60%, rgba(139,92,246,0.04) 100%)',
+                  boxShadow: '0 20px 60px -20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)',
+                }}>
+                {/* Saber / light-beam sweep */}
+                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+                  <div className="absolute -inset-y-8 -left-1/3 w-1/3 rotate-12 saber-sweep"
+                       style={{ background: 'linear-gradient(90deg, transparent, rgba(167,139,250,0.35), transparent)', filter: 'blur(10px)' }} />
                 </div>
-                <h3 className="text-xl font-bold mb-2 tracking-tight">{s.t}</h3>
-                <p className="text-[14px] leading-relaxed" style={{ color: 'rgba(245,245,247,0.55)' }}>{s.d}</p>
+                {/* Top glow edge */}
+                <div aria-hidden className="pointer-events-none absolute inset-x-8 top-0 h-px"
+                     style={{ background: 'linear-gradient(90deg, transparent, rgba(167,139,250,0.6), transparent)' }} />
+
+                <div className="relative flex items-baseline justify-between mb-10">
+                  <span className="font-mono font-bold tracking-tight" style={{ fontSize: '3rem', background: 'linear-gradient(180deg, #F5F3FF 0%, rgba(167,139,250,0.4) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{s.n}</span>
+                  <span className="text-[10px] uppercase tracking-[0.3em] font-semibold" style={{ color: 'rgba(167,139,250,0.7)' }}>passo</span>
+                </div>
+                <h3 className="relative text-xl font-bold mb-3 tracking-tight">{s.t}</h3>
+                <p className="relative text-[14px] leading-relaxed" style={{ color: 'rgba(245,245,247,0.6)' }}>{s.d}</p>
               </motion.div>
             ))}
           </div>
         </div>
+
+        <style>{`
+          @keyframes saber-sweep-kf {
+            0% { transform: translateX(0) rotate(12deg); }
+            100% { transform: translateX(500%) rotate(12deg); }
+          }
+          .saber-sweep { animation: saber-sweep-kf 1.4s ease-out; }
+        `}</style>
       </section>
+
 
       {/* SHOWCASE */}
       <section id="showcase" ref={showcaseRef} className="relative py-24 md:py-32 overflow-hidden">

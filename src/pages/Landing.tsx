@@ -240,43 +240,28 @@ const Landing: React.FC = () => {
                style={{ background: 'linear-gradient(90deg, #0A0A0F, transparent)' }} />
           <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10"
                style={{ background: 'linear-gradient(-90deg, #0A0A0F, transparent)' }} />
-          <div
-            className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory px-6 md:px-10 pb-2 cursor-grab active:cursor-grabbing"
-            style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
-            onPointerDown={(e) => {
-              const el = e.currentTarget;
-              const startX = e.pageX;
-              const startLeft = el.scrollLeft;
-              let moved = false;
-              el.setPointerCapture(e.pointerId);
-              const onMove = (ev: PointerEvent) => {
-                const dx = ev.pageX - startX;
-                if (Math.abs(dx) > 3) moved = true;
-                el.scrollLeft = startLeft - dx;
-              };
-              const onUp = (ev: PointerEvent) => {
-                el.removeEventListener('pointermove', onMove);
-                el.removeEventListener('pointerup', onUp);
-                el.removeEventListener('pointercancel', onUp);
-                if (moved) {
-                  const stop = (e2: Event) => { e2.preventDefault(); e2.stopPropagation(); window.removeEventListener('click', stop, true); };
-                  window.addEventListener('click', stop, true);
-                }
-                try { el.releasePointerCapture(ev.pointerId); } catch {}
-              };
-              el.addEventListener('pointermove', onMove);
-              el.addEventListener('pointerup', onUp);
-              el.addEventListener('pointercancel', onUp);
-            }}
-          >
-            {styles.map((s) => (
-              <div key={s.id} className="shrink-0 w-[240px] md:w-[300px] snap-start select-none">
-                <StyleCard src={s.preview_images[0]} name={s.name} tag={s.category} />
-              </div>
-            ))}
+          <div className="overflow-hidden">
+            <div
+              className="flex gap-4 w-max px-6 md:px-10 pb-2 landing-marquee"
+              style={{ animation: `landing-marquee-scroll ${Math.max(30, styles.length * 4)}s linear infinite` }}
+            >
+              {[...styles, ...styles].map((s, i) => (
+                <div key={`${s.id}-${i}`} className="shrink-0 w-[240px] md:w-[300px] select-none">
+                  <StyleCard src={s.preview_images[0]} name={s.name} tag={s.category} />
+                </div>
+              ))}
+            </div>
           </div>
 
+          <style>{`
+            @keyframes landing-marquee-scroll {
+              from { transform: translateX(0); }
+              to { transform: translateX(-50%); }
+            }
+            .landing-marquee:hover { animation-play-state: paused; }
+          `}</style>
         </div>
+
 
         <div className="mt-12 flex justify-center">
           <button onClick={goCreate}

@@ -37,7 +37,7 @@ const Landing: React.FC = () => {
   });
   const railX = useTransform(showcaseProgress, [0, 1], ['5%', '-45%']);
 
-  const goCreate = () => navigate('/gerador-de-carrosseis');
+  const goCreate = () => navigate('/auth?mode=register&next=/gerador-de-carrosseis');
   const goPlans = () => navigate('/precos');
   const goLogin = () => navigate('/auth');
 

@@ -888,9 +888,15 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Block anonymous callers — require an account before generating.
+  const { requireAuthenticatedUser } = await import('../_shared/requireAuth.ts');
+  const auth = await requireAuthenticatedUser(req, corsHeaders);
+  if (!auth.ok) return auth.response;
+
   try {
     const body = await req.json();
     const { jobId } = body;
+
 
     if (!jobId) {
       return new Response(JSON.stringify({ error: 'jobId is required' }), {

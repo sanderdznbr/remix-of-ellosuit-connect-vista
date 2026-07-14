@@ -142,17 +142,8 @@ const Landing: React.FC = () => {
 
           {/* LEFT — Type + CTAs */}
           <div className="relative z-10 w-full lg:w-3/5">
-            {/* Eyebrow badge */}
-            <motion.div
-              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-              className="mb-8 w-fit flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-[0.22em]"
-              style={{ border: '1px solid rgba(139,92,246,0.25)', background: 'rgba(139,92,246,0.08)', color: '#A78BFA' }}>
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#8B5CF6' }} />
-                <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: '#8B5CF6' }} />
-              </span>
-              Carrosséis · Stories · Posts
-            </motion.div>
+
+
 
             {/* Headline */}
             <motion.h1

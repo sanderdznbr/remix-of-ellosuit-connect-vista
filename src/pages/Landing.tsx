@@ -338,26 +338,74 @@ const Landing: React.FC = () => {
           </div>
         </div>
 
-        <motion.div style={{ x: railX }} className="flex gap-4 pl-6 md:pl-10 will-change-transform">
-          {posts.slice(0, 14).map((p, i) => (
-            <motion.div key={p.id}
-              whileHover={{ y: -8 }}
-              transition={{ type: 'spring', stiffness: 220, damping: 20 }}
-              className="relative shrink-0 w-[260px] md:w-[320px] aspect-[4/5] overflow-hidden group rounded-2xl"
-              style={{ background: '#101018', border: '1px solid rgba(255,255,255,0.08)',
-                       boxShadow: '0 30px 60px -30px rgba(139,92,246,0.35)' }}>
-              <img src={p.cover_url} alt={p.title} loading="lazy"
-                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                   style={{ objectPosition: 'center top' }} />
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(5,5,5,0.92) 100%)' }} />
-              <div className="absolute bottom-4 left-4 right-4">
-                <p className="text-[10px] uppercase tracking-[0.25em] mb-1 font-semibold" style={{ color: '#C4B5FD' }}>№ {String(i + 1).padStart(2, '0')}</p>
-                <p className="text-[15px] font-semibold truncate">{p.title}</p>
+        {posts.length > 0 ? (
+          <motion.div style={{ x: railX }} className="flex gap-4 pl-6 md:pl-10 will-change-transform">
+            {posts.slice(0, 14).map((p, i) => (
+              <motion.div key={p.id}
+                whileHover={{ y: -8 }}
+                transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+                className="relative shrink-0 w-[260px] md:w-[320px] aspect-[4/5] overflow-hidden group rounded-2xl"
+                style={{ background: '#101018', border: '1px solid rgba(255,255,255,0.08)',
+                         boxShadow: '0 30px 60px -30px rgba(139,92,246,0.35)' }}>
+                <img src={p.cover_url} alt={p.title} loading="lazy"
+                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                     style={{ objectPosition: 'center top' }} />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(5,5,5,0.92) 100%)' }} />
+                <div className="absolute bottom-4 left-4 right-4">
+                  <p className="text-[10px] uppercase tracking-[0.25em] mb-1 font-semibold" style={{ color: '#C4B5FD' }}>№ {String(i + 1).padStart(2, '0')}</p>
+                  <p className="text-[15px] font-semibold truncate">{p.title}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : (
+          // Fallback: usa previews dos estilos para nunca renderizar vazio
+          <div className="flex gap-4 pl-6 md:pl-10 overflow-x-auto no-scrollbar">
+            {styles.slice(0, 12).map((s, i) => (
+              <div key={s.id}
+                className="relative shrink-0 w-[260px] md:w-[320px] aspect-[4/5] overflow-hidden rounded-2xl"
+                style={{ background: '#101018', border: '1px solid rgba(255,255,255,0.08)',
+                         boxShadow: '0 30px 60px -30px rgba(139,92,246,0.35)' }}>
+                <img src={s.preview_images[0]} alt={s.name} loading="lazy"
+                     className="absolute inset-0 w-full h-full object-cover"
+                     style={{ objectPosition: 'center top' }} />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(5,5,5,0.92) 100%)' }} />
+                <div className="absolute bottom-4 left-4 right-4">
+                  <p className="text-[10px] uppercase tracking-[0.25em] mb-1 font-semibold" style={{ color: '#C4B5FD' }}>№ {String(i + 1).padStart(2, '0')}</p>
+                  <p className="text-[15px] font-semibold truncate">{s.name}</p>
+                </div>
               </div>
-            </motion.div>
-          ))}
-        </motion.div>
+            ))}
+          </div>
+        )}
       </section>
+
+      {/* POR QUE ELLOCONTENT (vs alternativas) */}
+      <section className="relative py-24 md:py-32 px-6 md:px-10">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-14">
+            <div className="text-[11px] uppercase tracking-[0.25em] mb-4 font-semibold" style={{ color: '#A78BFA' }}>Por que ellocontent</div>
+            <h2 className="mx-auto max-w-3xl" style={{ ...DISPLAY, fontSize: 'clamp(2rem, 5vw, 4rem)' }}>
+              O que o Canva<br /><span style={{ color: '#A78BFA' }}>não faz por você.</span>
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { t: 'IA de última geração', d: 'Rodamos Gemini 3 Pro para gerar textos, imagens e composições editoriais — não um template genérico com sua foto colada por cima.' },
+              { t: 'Marketplace de estilos', d: 'Presets curados por designers reais. Tipografia, paleta e ritmo já pensados por nicho — do editorial minimalista ao streetwear.' },
+              { t: 'Publica no Instagram', d: 'Integração oficial Meta. Conecta a conta Business e agenda o carrossel sem sair da plataforma. Sem plugin, sem gambiarra.' },
+            ].map((f) => (
+              <div key={f.t} className="p-7 rounded-2xl"
+                   style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+                <Check className="w-5 h-5 mb-4" style={{ color: '#A78BFA' }} />
+                <h3 className="text-lg font-bold mb-2 tracking-tight">{f.t}</h3>
+                <p className="text-[14px] leading-relaxed" style={{ color: 'rgba(245,245,247,0.6)' }}>{f.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
 
       {/* PRICING */}
       <section className="relative py-24 md:py-32 px-6 md:px-10">

@@ -96,6 +96,7 @@ const Landing: React.FC = () => {
         backdropFilter: 'blur(20px) saturate(160%)',
         backgroundColor: 'rgba(10,10,15,0.7)',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
       }}>
         <div className="max-w-[1400px] mx-auto flex items-center justify-between px-6 md:px-10 h-16">
           <img src={ellocontentLogo} alt="ellocontent" className="h-4 cursor-pointer"

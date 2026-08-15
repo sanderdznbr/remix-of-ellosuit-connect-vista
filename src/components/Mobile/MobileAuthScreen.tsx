@@ -4,12 +4,12 @@ import { motion } from 'framer-motion';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import '@/styles/carousel-loader.css';
 import { getAuthRedirectUrl } from '@/lib/platform';
+import { AppleSignInButton } from '@/components/AppleSignInButton';
 
 const MobileAuthScreen = () => {
   const navigate = useNavigate();
@@ -84,13 +84,6 @@ const MobileAuthScreen = () => {
       }
     } catch { setError('Erro inesperado.'); }
     finally { setLoading(false); }
-  };
-
-  const [showComingSoon, setShowComingSoon] = useState(false);
-
-  const handleSocialLogin = () => {
-    setShowComingSoon(true);
-    setTimeout(() => setShowComingSoon(false), 3000);
   };
 
   const switchMode = () => {
@@ -190,6 +183,12 @@ const MobileAuthScreen = () => {
             </form>
           )}
 
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-[11px] uppercase tracking-widest text-white/25">ou</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+          <AppleSignInButton disabled={loading} onError={(message) => setError(message || null)} />
 
           {/* Toggle */}
           <p className="text-center text-xs text-white/30">
@@ -204,13 +203,6 @@ const MobileAuthScreen = () => {
               </button>
             )}
           </p>
-
-          {/* Coming Soon Popup */}
-          {showComingSoon && (
-            <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-5 py-3 rounded-full shadow-lg text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-300">
-              🚀 Disponível em breve no lançamento!
-            </div>
-          )}
 
           {/* Legal links */}
           <div className="flex justify-center gap-4 text-xs text-white/20 pt-4 pb-2">

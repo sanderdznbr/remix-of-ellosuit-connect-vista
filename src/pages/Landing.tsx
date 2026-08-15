@@ -4,6 +4,7 @@ import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
 import { ArrowUpRight, Plus, Minus, Sparkles, Zap, Instagram, Check, Star, Users, Clock, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
+import { isNativeIOS } from '@/lib/platform';
 
 /* ─────────────────────────────────────────────────────────────
    ellocontent — Landing (Bold Sans, Editorial-Tech)
@@ -27,6 +28,7 @@ const Landing: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [styles, setStyles] = useState<Style[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const nativeIOS = isNativeIOS();
 
   const { scrollYProgress } = useScroll();
   const progressBar = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.3 });
@@ -106,7 +108,7 @@ const Landing: React.FC = () => {
             <a href="#estilos" className="hover:text-white transition-colors">Estilos</a>
             <a href="#como" className="hover:text-white transition-colors">Como funciona</a>
             <a href="#showcase" className="hover:text-white transition-colors">Showcase</a>
-            <button onClick={goPlans} className="hover:text-white transition-colors">Preços</button>
+            {!nativeIOS && <button onClick={goPlans} className="hover:text-white transition-colors">Preços</button>}
           </nav>
           <div className="flex items-center gap-3">
             <button onClick={goLogin} className="hidden sm:block text-[13px] font-medium px-3 py-1.5 rounded-full hover:text-white transition-colors"
@@ -170,11 +172,13 @@ const Landing: React.FC = () => {
                 Criar meu primeiro post grátis
                 <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </button>
-              <button onClick={goPlans}
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-[15px] font-semibold transition-colors hover:bg-white/5"
-                style={{ border: '1px solid rgba(255,255,255,0.14)', color: '#fff' }}>
-                Ver planos
-              </button>
+              {!nativeIOS && (
+                <button onClick={goPlans}
+                  className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-[15px] font-semibold transition-colors hover:bg-white/5"
+                  style={{ border: '1px solid rgba(255,255,255,0.14)', color: '#fff' }}>
+                  Ver planos
+                </button>
+              )}
             </motion.div>
 
 
@@ -424,8 +428,8 @@ const Landing: React.FC = () => {
       </section>
 
 
-      {/* PRICING */}
-      <section className="relative py-24 md:py-32 px-6 md:px-10">
+      {/* PRICING — web only; native iOS has no external purchase links */}
+      {!nativeIOS && <section className="relative py-24 md:py-32 px-6 md:px-10">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-14">
             <div className="text-[11px] uppercase tracking-[0.25em] mb-4 font-semibold" style={{ color: '#A78BFA' }}>Planos</div>
@@ -477,7 +481,7 @@ const Landing: React.FC = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* FAQ */}
       <section className="relative py-24 md:py-32 px-6">
@@ -543,7 +547,7 @@ const Landing: React.FC = () => {
             © {new Date().getFullYear()} ellocontent · Feito no Brasil
           </p>
           <div className="flex items-center gap-6 text-[13px] font-medium" style={{ color: 'rgba(245,245,247,0.6)' }}>
-            <a href="/precos" className="hover:text-white">Preços</a>
+            {!nativeIOS && <a href="/precos" className="hover:text-white">Preços</a>}
             <a href="/auth" className="hover:text-white">Entrar</a>
             <a href="/ajuda" className="hover:text-white">Suporte</a>
           </div>

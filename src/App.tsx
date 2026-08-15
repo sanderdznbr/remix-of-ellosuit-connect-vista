@@ -12,6 +12,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import '@/styles/carousel-loader.css';
 import { useAffiliateTracking } from "@/hooks/useAffiliateTracking";
 import { Navigate } from "react-router-dom";
+import { NativePurchaseGuard } from "@/components/NativePurchaseGuard";
 
 
 
@@ -39,6 +40,8 @@ const ChatCreator = lazy(() => import('./pages/ChatCreator'));
 const Calendario = lazy(() => import('./pages/Calendario'));
 const Hooks = lazy(() => import('./pages/Hooks'));
 const Analytics = lazy(() => import('./pages/Analytics'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,9 +110,9 @@ const App = () => (
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/gerador-de-carrosseis" element={<PublicCarouselGenerator />} />
-                  <Route path="/precos" element={<Pricing />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/marketplace/:id" element={<MarketplaceStyleDetail />} />
+                  <Route path="/precos" element={<NativePurchaseGuard><Pricing /></NativePurchaseGuard>} />
+                  <Route path="/checkout" element={<NativePurchaseGuard><Checkout /></NativePurchaseGuard>} />
+                  <Route path="/marketplace/:id" element={<NativePurchaseGuard><MarketplaceStyleDetail /></NativePurchaseGuard>} />
                   <Route path="/recursos" element={<Navigate to="/ajuda" replace />} />
                   <Route path="/suporte" element={<Navigate to="/ajuda" replace />} />
                   <Route path="/perfil" element={<Profile />} />
@@ -117,7 +120,7 @@ const App = () => (
                   <Route path="/configuracoes" element={<Settings />} />
 
                   <Route path="/post/:postId" element={<PostPublic />} />
-                  <Route path="/presentear" element={<Presentear />} />
+                  <Route path="/presentear" element={<NativePurchaseGuard><Presentear /></NativePurchaseGuard>} />
                   <Route path="/parceiros" element={<Parceiros />} />
                   <Route path="/area/parceiros" element={<AreaParceiros />} />
                   <Route path="/admin" element={<Admin />} />
@@ -128,6 +131,8 @@ const App = () => (
                   <Route path="/calendario" element={<Calendario />} />
                   <Route path="/hooks" element={<Hooks />} />
                   <Route path="/insights" element={<Analytics />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/terms" element={<Terms />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

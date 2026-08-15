@@ -10,6 +10,7 @@
     <!-- Google Tag Manager (defer via setTimeout) -->
     <script>
       window.addEventListener('load', function() {
+        if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') return;
         setTimeout(function() {
           var s = document.createElement('script');
           s.async = true;
@@ -97,6 +98,7 @@
     <script>
       // Load OneSignal after page is interactive
       window.addEventListener('load', function() {
+        if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') return;
         setTimeout(function() {
           var s = document.createElement('script');
           s.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
@@ -142,8 +144,8 @@
     <!-- End Google Tag Manager (noscript) -->
     <div id="root"></div>
     <footer id="static-policy-footer" style="text-align:center;padding:24px;font-family:sans-serif;font-size:14px;color:#666;background:#fff;">
-      <a href="https://www.ellosuit.online/privacy" style="color:#3000E3;text-decoration:underline;margin-right:16px;">Política de Privacidade</a>
-      <a href="https://www.ellosuit.online/terms" style="color:#3000E3;text-decoration:underline;">Termos de Serviço</a>
+      <a href="https://ellocontent.com/privacy" style="color:#3000E3;text-decoration:underline;margin-right:16px;">Política de Privacidade</a>
+      <a href="https://ellocontent.com/terms" style="color:#3000E3;text-decoration:underline;">Termos de Serviço</a>
     </footer>
     <script type="module" src="/src/main.tsx"></script>
     <script>

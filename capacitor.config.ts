@@ -1,19 +1,21 @@
 
-import { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.84320702497142e0bb916756570feabc',
-  appName: 'ellosuit-connect-vista',
+  appId: 'com.ellocontent.app',
+  appName: 'ellocontent',
   webDir: 'dist',
-  server: {
-    url: 'https://84320702-4971-42e0-bb91-6756570feabc.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+  backgroundColor: '#0a0a0f',
+  ios: {
+    backgroundColor: '#0a0a0f',
+    contentInset: 'automatic',
+    preferredContentMode: 'mobile',
   },
   plugins: {
     PushNotifications: {
-      presentationOptions: ["badge", "sound", "alert"]
-    }
-  }
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+  },
 };
 
 export default config;

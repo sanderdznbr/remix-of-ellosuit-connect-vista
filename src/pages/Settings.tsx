@@ -5,6 +5,7 @@ import { useAuth } from '@/components/AuthProvider';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import { CreditCard, Bell, Shield, Loader2, ChevronRight, Calendar, Receipt, Crown, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAuthRedirectUrl, isNativeIOS } from '@/lib/platform';
 
 interface SubscriptionData {
   plan_type: string;
@@ -70,6 +71,7 @@ const SettingsPage: React.FC = () => {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [credits, setCredits] = useState<CreditBalance | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [notifSettings, setNotifSettings] = useState({
     email_notifications: true,
     push_notifications: true,
@@ -159,6 +161,32 @@ const SettingsPage: React.FC = () => {
 
   const formatCurrency = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`;
 
+  const handleDeleteAccount = async () => {
+    const confirmation = window.prompt(
+      'Esta ação é permanente e excluirá sua conta e seus dados. Digite EXCLUIR para confirmar.',
+    );
+    if (confirmation !== 'EXCLUIR') return;
+
+    setDeletingAccount(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-account', { body: {} });
+      if (error) throw error;
+
+      await supabase.auth.signOut({ scope: 'local' });
+      toast.success('Sua conta foi excluída.');
+      navigate('/auth', { replace: true });
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível excluir sua conta. Tente novamente.',
+      );
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -243,7 +271,7 @@ const SettingsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="border-t border-white/[0.06] p-4 flex gap-2">
+              {!isNativeIOS() && <div className="border-t border-white/[0.06] p-4 flex gap-2">
                 <button
                   onClick={() => navigate('/precos')}
                   className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white cursor-pointer transition-all hover:opacity-90"
@@ -251,7 +279,7 @@ const SettingsPage: React.FC = () => {
                 >
                   {planPrice > 0 ? 'Gerenciar Plano' : 'Fazer Upgrade'}
                 </button>
-              </div>
+              </div>}
             </div>
 
             {/* Payment Method */}
@@ -367,7 +395,7 @@ const SettingsPage: React.FC = () => {
                 onClick={async () => {
                   if (!user?.email) return;
                   await supabase.auth.resetPasswordForEmail(user.email, {
-                    redirectTo: `${window.location.origin}/forgot-password`,
+                    redirectTo: getAuthRedirectUrl('/reset-password'),
                   });
                   toast.success('E-mail de redefinição enviado!');
                 }}
@@ -381,10 +409,11 @@ const SettingsPage: React.FC = () => {
               <h3 className="text-sm font-semibold text-red-400/70 mb-2">Zona de Perigo</h3>
               <p className="text-[11px] text-white/25 mb-3">Ações irreversíveis para sua conta.</p>
               <button
-                onClick={() => toast.info('Para excluir sua conta, entre em contato com o suporte.')}
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount}
                 className="px-4 py-2 rounded-xl text-xs font-medium text-red-400/50 border border-red-500/15 hover:border-red-500/30 hover:text-red-400 transition-colors cursor-pointer"
               >
-                Excluir conta
+                {deletingAccount ? 'Excluindo...' : 'Excluir conta'}
               </button>
             </div>
           </div>

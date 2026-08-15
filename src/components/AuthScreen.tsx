@@ -11,10 +11,10 @@ import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import '@/styles/carousel-loader.css';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileAuthScreen from '@/components/Mobile/MobileAuthScreen';
+import { AppleSignInButton } from '@/components/AppleSignInButton';
 
 const AuthScreen = () => {
   const { isMobile } = useIsMobile();
-  const [showComingSoon, setShowComingSoon] = useState(false);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,11 +104,6 @@ const AuthScreen = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleSocialLogin = () => {
-    setShowComingSoon(true);
-    setTimeout(() => setShowComingSoon(false), 3000);
   };
 
   const switchMode = () => {
@@ -311,6 +306,13 @@ const AuthScreen = () => {
             </form>
           )}
 
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-[11px] uppercase tracking-widest text-white/25">ou</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+          <AppleSignInButton disabled={isLoading} onError={(message) => setError(message || null)} />
+
           <p className="text-center text-[12.5px] text-white/35">
             {mode === 'signin' ? 'Ainda não tem uma conta?' : 'Já tem uma conta?'}{' '}
             {mode === 'signin' ? (
@@ -332,18 +334,13 @@ const AuthScreen = () => {
             )}
           </p>
 
-          {showComingSoon && (
-            <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-6 py-3 rounded-full shadow-lg text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
-              🚀 Disponível em breve no lançamento!
-            </div>
-          )}
         </motion.div>
 
         {/* Footer legal — Apple-style, fixed bottom */}
         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-4 text-[11px] text-white/25">
-          <a href="https://www.ellosuit.online/privacy" className="hover:text-white/50 transition-colors">Política de Privacidade</a>
+          <a href="https://ellocontent.com/privacy" className="hover:text-white/50 transition-colors">Política de Privacidade</a>
           <span>·</span>
-          <a href="https://www.ellosuit.online/terms" className="hover:text-white/50 transition-colors">Termos de Uso</a>
+          <a href="https://ellocontent.com/terms" className="hover:text-white/50 transition-colors">Termos de Uso</a>
         </div>
       </div>
     </div>

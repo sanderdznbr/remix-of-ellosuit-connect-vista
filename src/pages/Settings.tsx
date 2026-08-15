@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import { CreditCard, Bell, Shield, Loader2, ChevronRight, Calendar, Receipt, Crown, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAuthRedirectUrl, isNativeIOS } from '@/lib/platform';
+import { disableNativePushNotifications, requestNativePushRegistration } from '@/lib/nativePush';
 
 interface SubscriptionData {
   plan_type: string;
@@ -85,6 +86,16 @@ const SettingsPage: React.FC = () => {
     }
     loadData();
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const saved = user.user_metadata?.notification_preferences || {};
+    setNotifSettings({
+      email_notifications: saved.email_notifications !== false,
+      push_notifications: saved.push_notifications !== false,
+      marketing_emails: saved.marketing_emails === true,
+    });
+  }, [user?.id, user?.user_metadata?.notification_preferences]);
 
   const loadData = async () => {
     if (!user) return;
@@ -184,6 +195,41 @@ const SettingsPage: React.FC = () => {
       );
     } finally {
       setDeletingAccount(false);
+    }
+  };
+
+  const handleNotificationToggle = async (key: keyof typeof notifSettings) => {
+    if (!user) return;
+    const previous = notifSettings;
+    const nextValue = !previous[key];
+    const next = { ...previous, [key]: nextValue };
+    setNotifSettings(next);
+
+    try {
+      if (key === 'push_notifications' && isNativeIOS()) {
+        if (nextValue) {
+          const permission = await requestNativePushRegistration();
+          if (!permission.granted) {
+            setNotifSettings(previous);
+            toast.error('Ative as notificações nos Ajustes do iPhone para receber os avisos.');
+            return;
+          }
+        } else {
+          await disableNativePushNotifications();
+        }
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          notification_preferences: next,
+        },
+      });
+      if (error) throw error;
+      toast.success('Preferência salva');
+    } catch (error) {
+      console.error('Erro ao salvar preferência de notificação:', error);
+      setNotifSettings(previous);
+      toast.error('Não foi possível salvar a preferência.');
     }
   };
 
@@ -343,7 +389,7 @@ const SettingsPage: React.FC = () => {
             <h3 className="text-sm font-semibold text-white mb-2">Preferências de Notificação</h3>
             {[
               { key: 'email_notifications', label: 'Notificações por e-mail', desc: 'Receba atualizações sobre seus posts e conta' },
-              { key: 'push_notifications', label: 'Notificações push', desc: 'Alertas no navegador sobre novidades' },
+              { key: 'push_notifications', label: 'Notificações push', desc: isNativeIOS() ? 'Avisos no iPhone quando seu post começar, terminar ou falhar' : 'Alertas sobre seus posts e novidades' },
               { key: 'marketing_emails', label: 'E-mails promocionais', desc: 'Novidades, dicas e ofertas especiais' },
             ].map((item) => (
               <div key={item.key} className="flex items-center justify-between py-3 border-b border-white/[0.04] last:border-0">
@@ -352,10 +398,7 @@ const SettingsPage: React.FC = () => {
                   <p className="text-[11px] text-white/25 mt-0.5">{item.desc}</p>
                 </div>
                 <button
-                  onClick={() => {
-                    setNotifSettings((prev) => ({ ...prev, [item.key]: !prev[item.key as keyof typeof prev] }));
-                    toast.success('Preferência salva');
-                  }}
+                  onClick={() => handleNotificationToggle(item.key as keyof typeof notifSettings)}
                   className={`w-10 h-5 rounded-full transition-all relative cursor-pointer ${
                     notifSettings[item.key as keyof typeof notifSettings] ? 'bg-purple-500' : 'bg-white/10'
                   }`}

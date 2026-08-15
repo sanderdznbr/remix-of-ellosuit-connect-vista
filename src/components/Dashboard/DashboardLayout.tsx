@@ -149,16 +149,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             <div className="absolute" style={{ top: '10%', right: '5%', width: '35%', height: '35%', background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)', filter: 'blur(80px)' }} />
           </div>
         )}
-        <ExpiringCreditsBanner />
         <div
-          className="flex-1 min-h-0 overflow-y-auto flex flex-col relative z-10"
+          className={`flex-1 min-h-0 flex flex-col relative z-10 ${isHome ? 'overflow-hidden' : 'overflow-y-auto'}`}
           style={{
             WebkitOverflowScrolling: 'touch' as any,
             overscrollBehavior: 'contain',
-            touchAction: 'pan-y',
-            ...(isMobile ? { paddingBottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))', ...(isHome ? {} : { paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }) } : {}),
+            touchAction: isHome ? 'manipulation' : 'pan-y',
+            ...(isMobile ? {
+              boxSizing: 'border-box',
+              paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))',
+              paddingBottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))',
+            } : {}),
           }}
         >
+          <ExpiringCreditsBanner />
           {content}
         </div>
       </div>
@@ -167,7 +171,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
 
   if (isMobile) {
     return (
-      <div className="flex flex-col w-full" style={{ backgroundColor: '#0a0a0f', height: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="flex flex-col w-full overflow-hidden" style={{ backgroundColor: '#0a0a0f', height: '100dvh', minHeight: 0 }}>
         {/* Mobile Header — transparent, floats above content */}
         <header className="absolute left-0 right-0 flex items-center justify-between px-4 h-14 z-50 bg-transparent" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
           <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-white/60 cursor-pointer">
@@ -328,7 +332,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
 
 
   return (
-    <div className="flex h-screen w-full relative" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="flex w-full relative overflow-hidden" style={{ backgroundColor: '#0a0a0f', height: '100dvh', minHeight: 0 }}>
       <DashboardSidebar
         activeTab={activeTab}
         onTabChange={handleTabChange}

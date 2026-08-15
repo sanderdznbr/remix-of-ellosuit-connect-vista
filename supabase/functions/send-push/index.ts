@@ -2,238 +2,154 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import * as jose from "npm:jose@5";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const apnsBundleId = Deno.env.get('APNS_BUNDLE_ID');
-const apnsTeamId = Deno.env.get('APNS_TEAM_ID');
-const apnsKeyId = Deno.env.get('APNS_KEY_ID');
-const apnsKey = Deno.env.get('APNS_KEY');
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  status,
+  headers: { ...corsHeaders, "Content-Type": "application/json" },
+});
 
-// Function to create JWT for APNs authentication
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+// Keep ellocontent credentials isolated from the existing Ellosuit APNs key in
+// this shared Supabase project. Reusing APNS_* here would make one app replace
+// the credentials used by the other.
+const APNS_BUNDLE_ID = Deno.env.get("ELLOCONTENT_APNS_BUNDLE_ID") || "com.ellocontent.app";
+const APNS_TEAM_ID = Deno.env.get("ELLOCONTENT_APNS_TEAM_ID");
+const APNS_KEY_ID = Deno.env.get("ELLOCONTENT_APNS_KEY_ID");
+const APNS_KEY = Deno.env.get("ELLOCONTENT_APNS_KEY");
+
+function normalizePrivateKey(raw: string) {
+  const normalized = raw.replace(/\\n/g, "\n").trim();
+  if (normalized.includes("BEGIN PRIVATE KEY")) return normalized;
+  try { return atob(normalized); } catch { return normalized; }
+}
+
 async function createApnsJwt() {
-  if (!apnsKey || !apnsKeyId || !apnsTeamId) {
-    throw new Error('APNs credentials not configured');
+  if (!APNS_KEY || !APNS_KEY_ID || !APNS_TEAM_ID) {
+    throw new Error("APNs credentials are not configured");
   }
 
-  try {
-    // Decode the base64 private key
-    const privateKeyPem = apnsKey.replace(/\\n/g, '\n');
-    
-    // Import the private key
-    const privateKey = await jose.importPKCS8(privateKeyPem, 'ES256');
-    
-    const payload = {
-      iss: apnsTeamId,
-      iat: Math.floor(Date.now() / 1000)
-    };
-
-    // Create and sign the JWT
-    const jwt = await new jose.SignJWT(payload)
-      .setProtectedHeader({ alg: 'ES256', kid: apnsKeyId })
-      .setIssuedAt()
-      .setExpirationTime('1h')
-      .sign(privateKey);
-
-    console.log('🔑 APNs JWT created successfully for team:', apnsTeamId);
-    return jwt;
-  } catch (error) {
-    console.error('💥 Error creating APNs JWT:', error);
-    throw error;
-  }
+  const privateKey = await jose.importPKCS8(normalizePrivateKey(APNS_KEY), "ES256");
+  return await new jose.SignJWT({})
+    .setProtectedHeader({ alg: "ES256", kid: APNS_KEY_ID })
+    .setIssuer(APNS_TEAM_ID)
+    .setIssuedAt()
+    .setExpirationTime("55m")
+    .sign(privateKey);
 }
 
-function isNativeToken(token: string): boolean {
-  // Tokens nativos são hexadecimais de 64 caracteres
-  return /^[a-fA-F0-9]{64}$/.test(token);
-}
+async function sendToEnvironment(
+  token: string,
+  environment: "production" | "development",
+  jwt: string,
+  payload: Record<string, unknown>,
+  collapseId?: string,
+) {
+  const host = environment === "production" ? "api.push.apple.com" : "api.sandbox.push.apple.com";
+  const response = await fetch(`https://${host}/3/device/${token}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      "apns-topic": APNS_BUNDLE_ID,
+      "apns-push-type": "alert",
+      "apns-priority": "10",
+      "apns-expiration": "0",
+      ...(collapseId ? { "apns-collapse-id": collapseId.slice(0, 64) } : {}),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
 
-async function sendApnsPushNotification(deviceToken: string, title: string, body: string) {
-  try {
-    const isNative = isNativeToken(deviceToken);
-    console.log(`📱 Enviando notificação para token ${isNative ? 'nativo' : 'simulado'}:`, deviceToken.substring(0, 20) + '...');
-
-    if (!isNative) {
-      console.log('⚠️ Token simulado detectado, enviando resposta simulada');
-      return { success: true, simulation: true, message: 'Simulação para desenvolvimento web' };
-    }
-
-    if (!apnsBundleId || !apnsTeamId || !apnsKeyId || !apnsKey) {
-      console.log('⚠️ APNs credentials incomplete, cannot send real notification');
-      return { success: false, error: 'APNs credentials not configured' };
-    }
-
-    const jwt = await createApnsJwt();
-    
-    const payload = {
-      aps: {
-        alert: {
-          title: title,
-          body: body
-        },
-        sound: "default",
-        badge: 1,
-        "mutable-content": 1
-      },
-      data: {
-        type: "reminder",
-        timestamp: Date.now()
-      }
-    };
-
-    // APNs endpoint (production)
-    const apnsUrl = `https://api.push.apple.com/3/device/${deviceToken}`;
-    
-    console.log('📤 Enviando para APNs:', apnsUrl);
-    console.log('📋 Payload:', JSON.stringify(payload, null, 2));
-    
-    const response = await fetch(apnsUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${jwt}`,
-        'apns-topic': apnsBundleId,
-        'apns-push-type': 'alert',
-        'apns-priority': '10',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const responseText = await response.text();
-    console.log('📥 APNs Response Status:', response.status);
-    console.log('📥 APNs Response:', responseText);
-
-    if (response.ok) {
-      console.log('✅ APNs notification sent successfully');
-      return { success: true, simulation: false, apnsResponse: responseText };
-    } else {
-      console.error('❌ APNs error:', response.status, responseText);
-      return { 
-        success: false, 
-        error: `APNs error: ${response.status} - ${responseText}`,
-        apnsStatus: response.status,
-        apnsResponse: responseText
-      };
-    }
-  } catch (error) {
-    console.error('💥 Error sending APNs notification:', error);
-    return { success: false, error: (error as any).message };
-  }
+  const text = await response.text();
+  let reason = "";
+  try { reason = JSON.parse(text)?.reason || ""; } catch { reason = text; }
+  return { ok: response.ok, status: response.status, reason, environment };
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: corsHeaders
-    });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
+    const authorization = req.headers.get("Authorization") || "";
+    const accessToken = authorization.replace(/^Bearer\s+/i, "").trim();
+    if (!accessToken) return json({ error: "Authentication required" }, 401);
 
-    if (req.method === 'POST') {
-      const { title, body, deviceToken } = await req.json();
-      
-      if (!title || !body) {
-        throw new Error('Title and body are required');
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const body = await req.json().catch(() => ({}));
+    const isServiceCall = accessToken === SERVICE_ROLE_KEY;
+    let targetUserId: string | null = null;
+
+    if (isServiceCall) {
+      targetUserId = typeof body.userId === "string" ? body.userId : null;
+      if (!targetUserId) return json({ error: "userId is required for service calls" }, 400);
+    } else {
+      const { data: authData, error: authError } = await admin.auth.getUser(accessToken);
+      if (authError || !authData.user) return json({ error: "Invalid session" }, 401);
+      targetUserId = authData.user.id;
+    }
+
+    const title = String(body.title || "").trim().slice(0, 80);
+    const message = String(body.body || "").trim().slice(0, 220);
+    if (!title || !message) return json({ error: "title and body are required" }, 400);
+
+    const { data: devices, error: devicesError } = await admin
+      .from("device_tokens")
+      .select("token, environment")
+      .eq("user_id", targetUserId)
+      .eq("enabled", true);
+    if (devicesError) throw devicesError;
+
+    if (!devices?.length) {
+      return json({ success: true, sent: 0, message: "No registered devices" });
+    }
+
+    const jwt = await createApnsJwt();
+    const actionUrl = typeof body.actionUrl === "string" ? body.actionUrl : "/";
+    const notificationType = typeof body.type === "string" ? body.type : "info";
+    const payload = {
+      aps: {
+        alert: { title, body: message },
+        sound: "default",
+        badge: 1,
+      },
+      type: notificationType,
+      action_url: actionUrl,
+      ...(body.carouselId ? { carousel_id: String(body.carouselId) } : {}),
+      timestamp: Date.now(),
+    };
+
+    let sent = 0;
+    const results = [];
+    for (const device of devices) {
+      const preferred = device.environment === "development" ? "development" : "production";
+      let result = await sendToEnvironment(device.token, preferred, jwt, payload, body.collapseId);
+
+      if (!result.ok && result.reason === "BadDeviceToken") {
+        const fallback = preferred === "production" ? "development" : "production";
+        result = await sendToEnvironment(device.token, fallback, jwt, payload, body.collapseId);
       }
 
-      console.log('📲 Sending push notification:', { title, body });
-
-      // Get all device tokens if no specific token provided
-      let tokens = [];
-      if (deviceToken) {
-        tokens = [deviceToken];
-      } else {
-        const { data: deviceTokens, error } = await supabase
-          .from('device_tokens')
-          .select('token');
-
-        if (error) {
-          console.error('❌ Error fetching device tokens:', error);
-          throw error;
-        }
-
-        tokens = deviceTokens?.map(dt => dt.token) || [];
+      if (result.ok) sent++;
+      if (!result.ok && (result.status === 410 || result.reason === "Unregistered")) {
+        await admin.from("device_tokens").delete().eq("token", device.token);
       }
 
-      if (tokens.length === 0) {
-        console.log('⚠️ No device tokens found');
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'No devices to send notifications to',
-          sent: 0
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      console.log(`📱 Sending to ${tokens.length} device(s)`);
-
-      let sentCount = 0;
-      const results = [];
-
-      for (const token of tokens) {
-        try {
-          const result = await sendApnsPushNotification(token, title, body);
-          
-          results.push({
-            token: token.substring(0, 10) + '...',
-            success: result.success,
-            simulation: result.simulation || false,
-            error: result.error,
-            apnsStatus: result.apnsStatus,
-            isNative: isNativeToken(token)
-          });
-          
-          if (result.success) {
-            sentCount++;
-          }
-        } catch (error) {
-          console.error(`❌ Failed to send to token ${token}:`, error);
-          results.push({
-            token: token.substring(0, 10) + '...',
-            success: false,
-            error: (error as any).message,
-            isNative: isNativeToken(token)
-          });
-        }
-      }
-
-      console.log(`✅ Push notifications processed: ${sentCount}/${tokens.length} sent`);
-
-      return new Response(JSON.stringify({
-        success: true,
-        message: `Notifications sent to ${sentCount}/${tokens.length} devices`,
-        sent: sentCount,
-        total: tokens.length,
-        results: results,
-        apnsConfigured: !!(apnsBundleId && apnsTeamId && apnsKeyId && apnsKey)
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      results.push({
+        token: `${device.token.slice(0, 8)}…`,
+        success: result.ok,
+        status: result.status,
+        reason: result.reason || undefined,
+        environment: result.environment,
       });
     }
 
-    return new Response(JSON.stringify({
-      error: 'Method not allowed'
-    }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
+    return json({ success: sent > 0, sent, total: devices.length, results });
   } catch (error) {
-    console.error('💥 Error in send-push function:', error);
-    
-    return new Response(JSON.stringify({
-      success: false,
-      error: (error as any).message
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    console.error("send-push error:", error);
+    return json({ error: error instanceof Error ? error.message : "Unexpected error" }, 500);
   }
 });

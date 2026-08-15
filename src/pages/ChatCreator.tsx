@@ -723,6 +723,14 @@ const ChatCreator: React.FC = () => {
 
     } catch (err: any) {
       console.error('generation error:', err);
+      supabase.functions.invoke('send-push', {
+        body: {
+          title: 'Não foi possível gerar o post',
+          body: 'A geração falhou. Toque para voltar ao chat e tentar novamente.',
+          type: 'post_failed',
+          actionUrl: '/criar',
+        },
+      }).catch((pushError) => console.error('Falha ao enviar aviso de erro:', pushError));
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
       toast.error(err?.message || 'Erro ao gerar o post');
       appendAssistantWithWidget('Tive um problema gerando o post. Quer tentar de novo?', 'confirm_generate');

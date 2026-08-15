@@ -17,6 +17,32 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+async function notifyGenerationPush(params: {
+  userId: string;
+  topic?: string | null;
+  status: "started" | "ready" | "failed";
+  carouselId?: string | null;
+  errorMessage?: string | null;
+}) {
+  const safeTopic = String(params.topic || "seu conteúdo").trim().slice(0, 90);
+  const content = params.status === "started"
+    ? { title: "Seu post está sendo criado", body: `A IA começou a gerar “${safeTopic}”. Você pode continuar usando o app.`, type: "post_generating", actionUrl: "/projetos" }
+    : params.status === "ready"
+    ? { title: "Seu post está pronto ✨", body: `“${safeTopic}” terminou de ser gerado. Toque para visualizar.`, type: "post_ready", actionUrl: params.carouselId ? `/carousel/${params.carouselId}` : "/projetos" }
+    : { title: "Não foi possível gerar o post", body: params.errorMessage ? String(params.errorMessage).slice(0, 180) : `A geração de “${safeTopic}” falhou. Toque para tentar novamente.`, type: "post_failed", actionUrl: "/criar" };
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${SERVICE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: params.userId, ...content, carouselId: params.carouselId, collapseId: params.carouselId ? `post-${params.carouselId}` : undefined }),
+    });
+    if (!response.ok) console.error("Generation push failed:", response.status, await response.text());
+  } catch (error) {
+    console.error("Generation push request failed:", error);
+  }
+}
+
 declare const EdgeRuntime: { waitUntil?: (promise: Promise<unknown>) => void } | undefined;
 
 interface Brief {
@@ -624,6 +650,17 @@ Deno.serve(async (req) => {
       }));
       await sb.from("carousel_tasks").insert(tasks);
 
+      const startedPush = notifyGenerationPush({
+        userId: user.id,
+        topic: safeTitle,
+        status: "started",
+      });
+      if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+        EdgeRuntime.waitUntil(startedPush);
+      } else {
+        await startedPush;
+      }
+
       return new Response(JSON.stringify({ carouselId: inserted.id }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -940,9 +977,18 @@ ASPECT RATIO: ${ratio} — fill the canvas edge to edge with no framing (this is
         }
       })();
 
+      const readyPush = notifyGenerationPush({
+        userId: user.id,
+        topic: safeTopic,
+        status: "ready",
+        carouselId,
+      });
+
       // @ts-ignore
       if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
-        EdgeRuntime.waitUntil(bgWork);
+        EdgeRuntime.waitUntil(Promise.all([bgWork, readyPush]));
+      } else {
+        await readyPush;
       }
 
       return new Response(JSON.stringify({ carouselId, imageUrl: images[0] }), {

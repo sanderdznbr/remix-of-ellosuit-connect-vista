@@ -13,6 +13,7 @@ import '@/styles/carousel-loader.css';
 import { useAffiliateTracking } from "@/hooks/useAffiliateTracking";
 import { Navigate } from "react-router-dom";
 import { NativePurchaseGuard } from "@/components/NativePurchaseGuard";
+import NativePushManager from "@/components/NativePushManager";
 
 
 
@@ -88,6 +89,7 @@ const App = () => (
           <AffiliateTracker>
             <ScrollToTop />
             <AuthProvider>
+              <NativePushManager />
               <SubscriptionBlockedBanner />
               <Suspense fallback={<PageLoader />}>
                 <Routes>

@@ -20,6 +20,32 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+async function notifyGenerationPush(params: {
+  userId: string;
+  topic?: string | null;
+  status: 'started' | 'ready' | 'failed';
+  carouselId?: string | null;
+  errorMessage?: string | null;
+}) {
+  const safeTopic = String(params.topic || 'seu conteúdo').trim().slice(0, 90);
+  const content = params.status === 'started'
+    ? { title: 'Seu post está sendo criado', body: `A IA começou a gerar “${safeTopic}”. Você pode continuar usando o app.`, type: 'post_generating', actionUrl: '/projetos' }
+    : params.status === 'ready'
+    ? { title: 'Seu post está pronto ✨', body: `“${safeTopic}” terminou de ser gerado. Toque para visualizar.`, type: 'post_ready', actionUrl: params.carouselId ? `/carousel/${params.carouselId}` : '/projetos' }
+    : { title: 'Não foi possível gerar o post', body: params.errorMessage ? String(params.errorMessage).slice(0, 180) : `A geração de “${safeTopic}” falhou. Toque para tentar novamente.`, type: 'post_failed', actionUrl: '/criar' };
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: params.userId, ...content, carouselId: params.carouselId, collapseId: params.carouselId ? `post-${params.carouselId}` : undefined }),
+    });
+    if (!response.ok) console.error('Generation push failed:', response.status, await response.text());
+  } catch (error) {
+    console.error('Generation push request failed:', error);
+  }
+}
+
 function adminClient() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 }
@@ -89,6 +115,7 @@ async function processJob(jobId: string) {
   const startTime = Date.now();
   const MAX_EXECUTION_MS = 130_000;
   function timeLeft() { return MAX_EXECUTION_MS - (Date.now() - startTime); }
+  let activeJob: any = null;
 
   try {
     const sb = adminClient();
@@ -102,6 +129,13 @@ async function processJob(jobId: string) {
       console.error('Job not found for background processing:', jobId);
       return;
     }
+    activeJob = job;
+
+    await notifyGenerationPush({
+      userId: job.user_id,
+      topic: job.topic,
+      status: 'started',
+    });
 
     const styleConfig = job.style_config || {};
     const isSinglePost = styleConfig.contentMode === 'single-post' || job.card_count === 1;
@@ -111,6 +145,28 @@ async function processJob(jobId: string) {
     } else {
       await processCarousel(job, jobId, timeLeft);
     }
+
+    const { data: finalJob } = await sb
+      .from('carousel_generation_jobs')
+      .select('status, carousel_id, error_message')
+      .eq('id', jobId)
+      .maybeSingle();
+
+    if (finalJob?.status === 'completed') {
+      await notifyGenerationPush({
+        userId: job.user_id,
+        topic: job.topic,
+        status: 'ready',
+        carouselId: finalJob.carousel_id,
+      });
+    } else if (finalJob?.status === 'failed') {
+      await notifyGenerationPush({
+        userId: job.user_id,
+        topic: job.topic,
+        status: 'failed',
+        errorMessage: finalJob.error_message,
+      });
+    }
   } catch (err: any) {
     console.error('Background processing error:', err);
     await updateJob(jobId, {
@@ -118,6 +174,14 @@ async function processJob(jobId: string) {
       error_message: err.message || 'Erro interno',
       completed_at: new Date().toISOString(),
     });
+    if (activeJob?.user_id) {
+      await notifyGenerationPush({
+        userId: activeJob.user_id,
+        topic: activeJob.topic,
+        status: 'failed',
+        errorMessage: err.message,
+      });
+    }
   }
 }
 

@@ -166,13 +166,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
     <aside
       onMouseEnter={() => collapsedProp && setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className={`relative ${collapsedProp ? 'w-[64px]' : 'w-[264px]'} h-screen shrink-0 transition-all duration-300`}
+      className={`relative ${collapsedProp ? 'w-[64px]' : 'w-[264px]'} h-full min-h-0 shrink-0 transition-all duration-300`}
       aria-label="Navegação principal"
       aria-expanded={!collapsed}
       data-state={collapsed ? 'collapsed' : 'expanded'}
     >
       <div
-        className={`${collapsed ? 'w-[64px]' : 'w-[264px]'} h-screen flex flex-col overflow-hidden transition-all duration-300 border-r absolute top-0 left-0 z-40 ${collapsedProp && hovered ? 'shadow-2xl shadow-black/50' : ''}`}
+        className={`${collapsed ? 'w-[64px]' : 'w-[264px]'} h-full min-h-0 flex flex-col overflow-hidden transition-all duration-300 border-r absolute top-0 left-0 z-40 ${collapsedProp && hovered ? 'shadow-2xl shadow-black/50' : ''}`}
         style={{
           background: 'linear-gradient(180deg, #050507 0%, #07070b 100%)',
           borderColor: 'rgba(255,255,255,0.03)',

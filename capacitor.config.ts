@@ -2,8 +2,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.ellosuit.ios',
-  appName: 'ElloSuit',
+  appId: 'com.ellocontent.app',
+  appName: 'ellocontent',
   webDir: 'dist',
   backgroundColor: '#0a0a0f',
   ios: {

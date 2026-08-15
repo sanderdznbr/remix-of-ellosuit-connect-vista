@@ -8,9 +8,9 @@ export const getAuthRedirectUrl = (path = '/') => {
 
   // Supabase confirmation and recovery emails must use an HTTPS URL that is
   // already allowed in the project's redirect configuration. The web flow
-  // completes on ElloSuit and the user can then return to the installed app.
+  // completes on ellocontent and the user can then return to the installed app.
   if (isNativeIOS()) {
-    return `https://www.ellosuit.app${normalizedPath}`;
+    return `https://ellocontent.com${normalizedPath}`;
   }
 
   return `${window.location.origin}${normalizedPath}`;

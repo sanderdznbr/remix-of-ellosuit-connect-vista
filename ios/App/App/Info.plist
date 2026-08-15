@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>ElloSuit</string>
+	<string>ellocontent</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -28,10 +28,10 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>app.ellosuit.ios</string>
+			<string>com.ellocontent.app</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>ellosuit</string>
+				<string>ellocontent</string>
 			</array>
 		</dict>
 	</array>
@@ -42,11 +42,11 @@
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.graphics-design</string>
 	<key>NSCameraUsageDescription</key>
-	<string>O ElloSuit usa a câmera somente quando você escolhe fotografar uma imagem para criar ou personalizar seu conteúdo.</string>
+	<string>O ellocontent usa a câmera somente quando você escolhe fotografar uma imagem para criar ou personalizar seu conteúdo.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>O ElloSuit usa o microfone quando você escolhe ditar uma solicitação para o assistente de criação.</string>
+	<string>O ellocontent usa o microfone quando você escolhe ditar uma solicitação para o assistente de criação.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>O ElloSuit acessa as fotos que você selecionar para criar, editar e personalizar conteúdos.</string>
+	<string>O ellocontent acessa as fotos que você selecionar para criar, editar e personalizar conteúdos.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

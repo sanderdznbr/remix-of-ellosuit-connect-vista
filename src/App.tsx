@@ -40,6 +40,8 @@ const ChatCreator = lazy(() => import('./pages/ChatCreator'));
 const Calendario = lazy(() => import('./pages/Calendario'));
 const Hooks = lazy(() => import('./pages/Hooks'));
 const Analytics = lazy(() => import('./pages/Analytics'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -129,6 +131,8 @@ const App = () => (
                   <Route path="/calendario" element={<Calendario />} />
                   <Route path="/hooks" element={<Hooks />} />
                   <Route path="/insights" element={<Analytics />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/terms" element={<Terms />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

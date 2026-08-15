@@ -214,9 +214,9 @@ const MobileAuthScreen = () => {
 
           {/* Legal links */}
           <div className="flex justify-center gap-4 text-xs text-white/20 pt-4 pb-2">
-            <a href="https://www.ellosuit.app/privacy" className="underline hover:text-white/40 transition-colors">Política de Privacidade</a>
+            <a href="https://ellocontent.com/privacy" className="underline hover:text-white/40 transition-colors">Política de Privacidade</a>
             <span>•</span>
-            <a href="https://www.ellosuit.app/terms" className="underline hover:text-white/40 transition-colors">Termos de Uso</a>
+            <a href="https://ellocontent.com/terms" className="underline hover:text-white/40 transition-colors">Termos de Uso</a>
           </div>
         </motion.div>
       </div>

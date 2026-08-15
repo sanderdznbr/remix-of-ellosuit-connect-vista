@@ -39,6 +39,12 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>O ElloSuit usa a câmera somente quando você escolhe fotografar uma imagem para criar ou personalizar seu conteúdo.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>O ElloSuit usa o microfone quando você escolhe ditar uma solicitação para o assistente de criação.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>O ElloSuit acessa as fotos que você selecionar para criar, editar e personalizar conteúdos.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

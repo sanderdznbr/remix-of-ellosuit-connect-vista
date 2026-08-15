@@ -341,9 +341,9 @@ const AuthScreen = () => {
 
         {/* Footer legal — Apple-style, fixed bottom */}
         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-4 text-[11px] text-white/25">
-          <a href="https://www.ellosuit.online/privacy" className="hover:text-white/50 transition-colors">Política de Privacidade</a>
+          <a href="https://www.ellosuit.app/privacy" className="hover:text-white/50 transition-colors">Política de Privacidade</a>
           <span>·</span>
-          <a href="https://www.ellosuit.online/terms" className="hover:text-white/50 transition-colors">Termos de Uso</a>
+          <a href="https://www.ellosuit.app/terms" className="hover:text-white/50 transition-colors">Termos de Uso</a>
         </div>
       </div>
     </div>

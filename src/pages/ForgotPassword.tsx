@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
+import { getAuthRedirectUrl } from '@/lib/platform';
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ export default function ForgotPassword() {
     setError(null);
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: getAuthRedirectUrl('/reset-password'),
       });
       if (resetError) throw resetError;
       setSent(true);

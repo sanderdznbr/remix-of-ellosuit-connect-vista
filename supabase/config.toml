@@ -1,6 +1,8 @@
 project_id = "jwddiyuezqrpuakazvgg"
 
 [functions]
+  [functions.delete-account]
+    verify_jwt = true
   [functions.auth-email-hook]
     verify_jwt = false
   [functions.ellocontent-webhook]

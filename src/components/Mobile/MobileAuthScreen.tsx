@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import '@/styles/carousel-loader.css';
+import { getAuthRedirectUrl } from '@/lib/platform';
 
 const MobileAuthScreen = () => {
   const navigate = useNavigate();
@@ -74,7 +75,7 @@ const MobileAuthScreen = () => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email, password,
-        options: { data: { full_name: name, company_name: company, source: 'ellocontent' }, emailRedirectTo: `${window.location.origin}/` }
+        options: { data: { full_name: name, company_name: company, source: 'ellocontent' }, emailRedirectTo: getAuthRedirectUrl('/') }
       });
       if (error) { setError(String(error.message)); return; }
       if (data?.user && !data.session) {
@@ -213,9 +214,9 @@ const MobileAuthScreen = () => {
 
           {/* Legal links */}
           <div className="flex justify-center gap-4 text-xs text-white/20 pt-4 pb-2">
-            <a href="https://www.ellosuit.online/privacy" className="underline hover:text-white/40 transition-colors">Política de Privacidade</a>
+            <a href="https://www.ellosuit.app/privacy" className="underline hover:text-white/40 transition-colors">Política de Privacidade</a>
             <span>•</span>
-            <a href="https://www.ellosuit.online/terms" className="underline hover:text-white/40 transition-colors">Termos de Uso</a>
+            <a href="https://www.ellosuit.app/terms" className="underline hover:text-white/40 transition-colors">Termos de Uso</a>
           </div>
         </motion.div>
       </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { getAuthRedirectUrl } from '@/lib/platform';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -86,7 +87,7 @@ export const useAuth = () => {
   }, []);
 
   const signUp = async (email: string, password: string, username: string, companyName: string, phone?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = getAuthRedirectUrl('/');
     
     console.log('📝 Signing up:', email, 'with company:', companyName);
     
@@ -166,7 +167,7 @@ export const useAuth = () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`
+        redirectTo: getAuthRedirectUrl('/')
       }
     });
     

@@ -39,6 +39,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.graphics-design</string>
 	<key>NSCameraUsageDescription</key>
 	<string>O ElloSuit usa a câmera somente quando você escolhe fotografar uma imagem para criar ou personalizar seu conteúdo.</string>
 	<key>NSMicrophoneUsageDescription</key>

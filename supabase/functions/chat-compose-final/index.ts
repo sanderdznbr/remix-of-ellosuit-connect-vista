@@ -32,7 +32,7 @@ async function notifyGenerationPush(params: {
     : { title: "Não foi possível gerar o post", body: params.errorMessage ? String(params.errorMessage).slice(0, 180) : `A geração de “${safeTopic}” falhou. Toque para tentar novamente.`, type: "post_failed", actionUrl: "/criar" };
 
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/ellocontent-push`, {
       method: "POST",
       headers: { Authorization: `Bearer ${SERVICE_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ userId: params.userId, ...content, carouselId: params.carouselId, collapseId: params.carouselId ? `post-${params.carouselId}` : undefined }),

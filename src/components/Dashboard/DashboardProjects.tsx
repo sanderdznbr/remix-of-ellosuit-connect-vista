@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2, Pencil, Check, Sparkles, X, CheckSquare, Calendar as CalendarIcon } from 'lucide-react';
+import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2, Pencil, Check, Sparkles, X, CheckSquare, Calendar as CalendarIcon, MoreHorizontal } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -32,6 +32,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [visibleCount, setVisibleCount] = useState(9);
   const [scheduleItem, setScheduleItem] = useState<any | null>(null);
   const [scheduleDate, setScheduleDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [activeActionsId, setActiveActionsId] = useState<string | null>(null);
 
   const openScheduleDialog = (e: React.MouseEvent, item: any) => {
     e.stopPropagation();
@@ -341,6 +342,8 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
           <div className="flex items-center rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
             <button
               onClick={() => setViewMode('grid')}
+              aria-label="Visualização em grade"
+              aria-pressed={viewMode === 'grid'}
               className="p-2 transition-colors cursor-pointer"
               style={{ backgroundColor: viewMode === 'grid' ? 'rgba(255,255,255,0.1)' : 'transparent', color: viewMode === 'grid' ? '#fff' : 'rgba(255,255,255,0.3)' }}
             >
@@ -348,6 +351,8 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
             </button>
             <button
               onClick={() => setViewMode('list')}
+              aria-label="Visualização em lista"
+              aria-pressed={viewMode === 'list'}
               className="p-2 transition-colors cursor-pointer"
               style={{ backgroundColor: viewMode === 'list' ? 'rgba(255,255,255,0.1)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'rgba(255,255,255,0.3)' }}
             >
@@ -442,13 +447,13 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                       {item.card_count || '?'} cards · {formatDate(item.created_at)}
                     </p>
                   </div>
-                  <button onClick={(e) => toggleStar(e, item.id, item.is_starred)} className="p-1 rounded-md transition-colors cursor-pointer" style={{ color: item.is_starred ? '#facc15' : 'rgba(255,255,255,0.12)' }}>
+                  <button aria-label={item.is_starred ? 'Remover dos favoritos' : 'Adicionar aos favoritos'} onClick={(e) => toggleStar(e, item.id, item.is_starred)} className="p-1 rounded-md transition-colors cursor-pointer" style={{ color: item.is_starred ? '#facc15' : 'rgba(255,255,255,0.12)' }}>
                     <Star className="w-3.5 h-3.5" fill={item.is_starred ? '#facc15' : 'none'} />
                   </button>
-                  <button onClick={(e) => handleDelete(e, item.id)} className="p-1 rounded-md transition-colors cursor-pointer" style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.12)' }} title={deleteConfirmId === item.id ? 'Clique novamente para confirmar' : 'Excluir'}>
+                  <button aria-label={deleteConfirmId === item.id ? 'Confirmar exclusão' : 'Excluir projeto'} onClick={(e) => handleDelete(e, item.id)} className="p-1 rounded-md transition-colors cursor-pointer" style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.12)' }} title={deleteConfirmId === item.id ? 'Clique novamente para confirmar' : 'Excluir'}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={(e) => openPublishDialog(e, item)} className="p-1 rounded-md transition-colors cursor-pointer" style={{ color: publishingId === item.id ? 'rgba(255,255,255,0.12)' : 'rgba(168,85,247,0.5)' }} title="Publicar na comunidade" disabled={publishingId === item.id}>
+                  <button aria-label="Publicar na comunidade" onClick={(e) => openPublishDialog(e, item)} className="p-1 rounded-md transition-colors cursor-pointer" style={{ color: publishingId === item.id ? 'rgba(255,255,255,0.12)' : 'rgba(168,85,247,0.5)' }} title="Publicar na comunidade" disabled={publishingId === item.id}>
                     {publishingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
                   </button>
                 </div>
@@ -465,7 +470,14 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                   outline: selectionMode && isSelected ? '2px solid #8B5CF6' : undefined,
                   outlineOffset: selectionMode && isSelected ? '-2px' : undefined,
                 }}
-                onClick={(e) => selectionMode ? toggleSelected(e, item.id) : (onLoadCarousel ? onLoadCarousel(item) : onStartCarousel())}
+                onClick={(e) => {
+                  if (selectionMode) {
+                    toggleSelected(e, item.id);
+                    return;
+                  }
+                  setActiveActionsId(null);
+                  onLoadCarousel ? onLoadCarousel(item) : onStartCarousel();
+                }}
               >
                 {cover && (
                   <img
@@ -494,17 +506,36 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                     <Star className="w-3 h-3" fill="#facc15" />
                   </div>
                 )}
+                {!selectionMode && (
+                  <button
+                    type="button"
+                    aria-label={`Ações de ${item.title || item.topic || 'projeto'}`}
+                    aria-expanded={activeActionsId === item.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveActionsId((current) => current === item.id ? null : item.id);
+                    }}
+                    className="absolute top-1.5 right-1.5 z-20 flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-black/65 text-white/70 opacity-100 backdrop-blur-sm transition-all md:opacity-0 md:group-hover:opacity-100"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                )}
                 {/* Hover overlay (hidden in selection mode) */}
                 {!selectionMode && (
                   <div
-                    className="absolute inset-0 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-all duration-300"
+                    className={`absolute inset-0 flex flex-col justify-end transition-all duration-300 ${
+                      activeActionsId === item.id
+                        ? 'opacity-100 pointer-events-auto'
+                        : 'opacity-0 pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto'
+                    }`}
                     style={{
                       background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 80%)',
                     }}
                   >
                     <div className="flex flex-col gap-0.5 px-3 pb-3">
                       <button
-                        onClick={(e) => { e.stopPropagation(); onLoadCarousel ? onLoadCarousel(item) : onStartCarousel(); }}
+                        aria-label={`Editar ${item.title || item.topic || 'projeto'}`}
+                        onClick={(e) => { e.stopPropagation(); setActiveActionsId(null); onLoadCarousel ? onLoadCarousel(item) : onStartCarousel(); }}
                         className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
                         style={{ color: 'rgba(255,255,255,0.8)' }}
                       >
@@ -512,6 +543,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                         <span className="text-[11px]">Editar</span>
                       </button>
                       <button
+                        aria-label={`Compartilhar ${item.title || item.topic || 'projeto'}`}
                         onClick={(e) => openPublishDialog(e, item)}
                         className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
                         style={{ color: 'rgba(255,255,255,0.8)' }}
@@ -521,6 +553,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                         <span className="text-[11px]">Compartilhar</span>
                       </button>
                       <button
+                        aria-label={`Mover ${item.title || item.topic || 'projeto'} para o calendário`}
                         onClick={(e) => openScheduleDialog(e, item)}
                         className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
                         style={{ color: 'rgba(255,255,255,0.8)' }}
@@ -529,6 +562,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                         <span className="text-[11px]">Mover para calendário</span>
                       </button>
                       <button
+                        aria-label={deleteConfirmId === item.id ? `Confirmar exclusão de ${item.title || item.topic || 'projeto'}` : `Excluir ${item.title || item.topic || 'projeto'}`}
                         onClick={(e) => handleDelete(e, item.id)}
                         className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
                         style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.8)' }}

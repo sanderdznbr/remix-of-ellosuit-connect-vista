@@ -8,6 +8,7 @@ import { isNativeIOS } from '@/lib/platform';
 export function ExpiringCreditsBanner() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const nativeIOS = isNativeIOS();
   const [expiringData, setExpiringData] = useState<{
     extraCredits: number;
     expiresAt: string;
@@ -16,7 +17,7 @@ export function ExpiringCreditsBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || nativeIOS) return;
 
     const check = async () => {
       try {
@@ -57,12 +58,11 @@ export function ExpiringCreditsBanner() {
     };
 
     check();
-  }, [user]);
+  }, [user, nativeIOS]);
 
-  if (!expiringData || dismissed) return null;
+  if (nativeIOS || !expiringData || dismissed) return null;
 
   const isUrgent = expiringData.daysLeft <= 7;
-  const nativeIOS = isNativeIOS();
   const formattedDate = new Date(expiringData.expiresAt).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'long',

@@ -33,7 +33,12 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.jpg', 'favicon.ico', 'og-image.jpg'],
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg,woff,woff2}'],
+        // Large gallery images stay demand-loaded. Pre-caching them made the
+        // first visit download the entire marketplace before it was opened.
+        // Route chunks remain genuinely lazy; the browser HTTP cache stores
+        // scripts/styles after first use instead of the service worker
+        // downloading every feature during installation.
+        globPatterns: ['**/*.{html,ico}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         navigateFallbackDenylist: [/^\/~oauth/],
         runtimeCaching: [

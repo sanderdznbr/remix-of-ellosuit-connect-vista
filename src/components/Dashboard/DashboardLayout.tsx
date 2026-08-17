@@ -1,27 +1,35 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExpiringCreditsBanner } from '@/components/ExpiringCreditsBanner';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import DashboardSidebar from './DashboardSidebar';
-import DashboardHome from './DashboardHome';
-import DashboardProjects from './DashboardProjects';
-import BrandGallery from './BrandGallery';
-import PromptGallery from './PromptGallery';
-import MarketplaceContent from '@/components/Marketplace/MarketplaceContent';
-import FaceGenerator from './FaceGenerator';
-import StyleCreator from './StyleCreator';
-import LogoRemoverTool from './LogoRemoverTool';
-import LogoRemoverHistory from './LogoRemoverHistory';
-import BehanceImporter from './BehanceImporter';
-import InstagramImporter from './InstagramImporter';
-import TrendsPanel, { type TrendData } from './TrendsPanel';
+import type { TrendData } from './TrendsPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard, Home, LayoutGrid, MessageCircle, Users, History } from 'lucide-react';
+import { X, User, LogOut, Settings, CreditCard, Home, LayoutGrid, MessageCircle, Users, History } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { tabFromPath, routeFromTab } from '@/utils/dashboard-routes';
 import ellocontentLogo from '@/assets/ellocontent2.svg';
+import { isNativeIOS } from '@/lib/platform';
+
+const DashboardHome = lazy(() => import('./DashboardHome'));
+const DashboardProjects = lazy(() => import('./DashboardProjects'));
+const BrandGallery = lazy(() => import('./BrandGallery'));
+const PromptGallery = lazy(() => import('./PromptGallery'));
+const MarketplaceContent = lazy(() => import('@/components/Marketplace/MarketplaceContent'));
+const FaceGenerator = lazy(() => import('./FaceGenerator'));
+const StyleCreator = lazy(() => import('./StyleCreator'));
+const LogoRemoverTool = lazy(() => import('./LogoRemoverTool'));
+const LogoRemoverHistory = lazy(() => import('./LogoRemoverHistory'));
+const BehanceImporter = lazy(() => import('./BehanceImporter'));
+const InstagramImporter = lazy(() => import('./InstagramImporter'));
+const TrendsPanel = lazy(() => import('./TrendsPanel'));
+
+const DashboardPanelLoader = () => (
+  <div className="flex min-h-48 flex-1 items-center justify-center" role="status" aria-label="Carregando conteúdo">
+    <div className="h-7 w-7 animate-spin rounded-full border-2 border-white/10 border-t-purple-400" />
+  </div>
+);
 
 interface DashboardLayoutProps {
   onStartCarousel?: (topic?: string, mentionedPrompts?: any[], postFormat?: string, trendData?: TrendData) => void;
@@ -47,7 +55,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   const { isMobile } = useIsMobile();
   const { user, signOut } = useAuth();
 
-  const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'U';
   const email = user?.email || '';
 
   // Fetch credit balance
@@ -163,7 +170,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
           }}
         >
           <ExpiringCreditsBanner />
-          {content}
+          <Suspense fallback={<DashboardPanelLoader />}>
+            {content}
+          </Suspense>
         </div>
       </div>
     );
@@ -174,7 +183,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
       <div className="flex flex-col w-full overflow-hidden" style={{ backgroundColor: '#0a0a0f', height: '100dvh', minHeight: 0 }}>
         {/* Mobile Header — transparent, floats above content */}
         <header className="absolute left-0 right-0 flex items-center justify-between px-4 h-14 z-50 bg-transparent" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-          <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-white/60 cursor-pointer">
+          <button onClick={() => setSidebarOpen(true)} aria-label="Abrir menu" aria-expanded={sidebarOpen} className="p-1.5 text-white/60 cursor-pointer">
             <div className="w-5 h-4 flex flex-col justify-between">
               <span className="block w-full h-[1.5px] bg-white/60 rounded-full" />
               <span className="block w-3.5 h-[1.5px] bg-white/60 rounded-full" />
@@ -182,7 +191,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             </div>
           </button>
           <img src={ellocontentLogo} alt="elloContent" className="h-7 cursor-pointer" onClick={() => navigate('/')} />
-          <button onClick={() => setProfileOpen(!profileOpen)} className="relative cursor-pointer p-1.5 text-white/60 transition-transform duration-200">
+          <button onClick={() => setProfileOpen(!profileOpen)} aria-label={profileOpen ? 'Fechar perfil' : 'Abrir perfil'} aria-expanded={profileOpen} className="relative cursor-pointer p-1.5 text-white/60 transition-transform duration-200">
             {profileOpen ? <X className="w-5 h-5" /> : <User className="w-5 h-5" />}
           </button>
         </header>
@@ -210,12 +219,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
               >
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
                   <p className="text-sm text-white/70 font-medium truncate">{email}</p>
-                  <button onClick={() => setProfileOpen(false)} className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors">
+                  <button onClick={() => setProfileOpen(false)} aria-label="Fechar perfil" className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="py-1">
-                  {(() => {
+                  {!isNativeIOS() && (() => {
                     const balance = creditBalance ?? 0;
                     const planNameLower = planName.toLowerCase();
                     const planLabel = planNameLower.includes('growth') ? 'Growth' : planNameLower.includes('pro') ? 'Pro' : planNameLower.includes('starter') ? 'Starter' : 'Free';
@@ -226,7 +235,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
                     const bonusCredits = monthlyCredits > 0 ? Math.max(0, balance - monthlyCredits) : 0;
 
                     return (
-                      <div className="px-4 py-3 border-b border-white/[0.06] cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => { setProfileOpen(false); navigate('/precos'); }}>
+                      <div
+                        className={`px-4 py-3 border-b border-white/[0.06] transition-colors ${isNativeIOS() ? '' : 'cursor-pointer hover:bg-white/[0.04]'}`}
+                        onClick={() => {
+                          if (isNativeIOS()) return;
+                          setProfileOpen(false);
+                          navigate('/precos');
+                        }}
+                      >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-1.5">
                             <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md" style={{ backgroundColor: `${planColor}20`, color: planColor }}>
@@ -261,9 +277,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
                   <button onClick={() => { setProfileOpen(false); navigate('/comunidade'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
                     <Users className="w-4 h-4" /> Comunidade
                   </button>
-                  <button onClick={() => { setProfileOpen(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
-                    <CreditCard className="w-4 h-4" /> Assinatura
-                  </button>
+                  {!isNativeIOS() && (
+                    <button onClick={() => { setProfileOpen(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                      <CreditCard className="w-4 h-4" /> Assinatura
+                    </button>
+                  )}
                   <button onClick={() => { setProfileOpen(false); navigate('/projetos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
                     <History className="w-4 h-4" /> Histórico
                   </button>
@@ -290,7 +308,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
             <div className="relative w-[260px] h-full animate-in slide-in-from-left duration-200 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' as any, overscrollBehavior: 'contain' }}>
               <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} onLoadCarousel={onLoadCarousel} />
-              <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-3 p-1.5 text-white/40 hover:text-white cursor-pointer z-10">
+              <button onClick={() => setSidebarOpen(false)} aria-label="Fechar menu" className="absolute top-4 right-3 p-1.5 text-white/40 hover:text-white cursor-pointer z-10">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -318,6 +336,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             <button
               key={item.key}
               onClick={item.onClick}
+              aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
               className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer transition-colors"
               style={{ color: item.active ? '#a78bfa' : 'rgba(255,255,255,0.5)' }}
             >

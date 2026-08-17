@@ -6,6 +6,8 @@ import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import { toast } from 'sonner';
+import faviconIcon from '@/assets/favicon.png';
+import { validateCommunityText } from '@/lib/communityModeration';
 
 interface Post {
   id: string;
@@ -36,12 +38,14 @@ function BentoGrid({ posts }: { posts: Post[] }) {
       {columns.map((col, colIdx) => (
         <div key={colIdx} className="flex-1 flex flex-col gap-3">
           {col.map((post) => (
-            <motion.div
+            <motion.button
+              type="button"
               key={post.id}
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
-              className="group relative rounded-xl overflow-hidden cursor-pointer bg-white/[0.03]"
+              aria-label={`Abrir post de ${post.profile?.display_name || 'usuário'}`}
+              className="group relative w-full rounded-xl overflow-hidden cursor-pointer bg-white/[0.03] text-left"
               onClick={() => navigate(`/post/${post.id}`)}
             >
               {post.cover_url ? (
@@ -53,11 +57,12 @@ function BentoGrid({ posts }: { posts: Post[] }) {
                   style={{ minHeight: '180px' }}
                 />
               ) : (
-                <div className="w-full flex items-center justify-center text-white/10 text-xs" style={{ aspectRatio: '4/5' }}>
-                  Sem capa
+                <div className="w-full flex flex-col items-center justify-center gap-2 text-white/30 text-xs" style={{ aspectRatio: '4/5' }}>
+                  <img src={faviconIcon} alt="ellocontent" className="h-10 w-10 opacity-30" />
+                  Capa indisponível
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200 flex flex-col justify-end p-3">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden shrink-0">
                     {post.profile?.avatar_url ? (
@@ -75,7 +80,7 @@ function BentoGrid({ posts }: { posts: Post[] }) {
                   <span className="text-[11px]">{post.likes_count || 0}</span>
                 </div>
               </div>
-            </motion.div>
+            </motion.button>
           ))}
         </div>
       ))}
@@ -96,22 +101,25 @@ function BentoGridMobile({ posts }: { posts: Post[] }) {
       {columns.map((col, colIdx) => (
         <div key={colIdx} className="flex-1 flex flex-col gap-2">
           {col.map((post) => (
-            <div
+            <button
+              type="button"
               key={post.id}
-              className="relative rounded-lg overflow-hidden cursor-pointer bg-white/[0.03]"
+              aria-label={`Abrir post de ${post.profile?.display_name || 'usuário'}`}
+              className="relative w-full rounded-lg overflow-hidden cursor-pointer bg-white/[0.03] text-left"
               onClick={() => navigate(`/post/${post.id}`)}
             >
               {post.cover_url ? (
                 <img
                   src={post.cover_url}
-                  alt=""
+                  alt={post.caption || 'Criação publicada na comunidade'}
                   className="w-full object-cover block"
                   loading="lazy"
                   style={{ minHeight: '120px' }}
                 />
               ) : (
-                <div className="w-full flex items-center justify-center text-white/10 text-xs" style={{ aspectRatio: '4/5' }}>
-                  Sem capa
+                <div className="w-full flex flex-col items-center justify-center gap-2 text-white/30 text-[10px]" style={{ aspectRatio: '4/5' }}>
+                  <img src={faviconIcon} alt="ellocontent" className="h-8 w-8 opacity-30" />
+                  Capa indisponível
                 </div>
               )}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 flex items-center gap-1.5">
@@ -128,7 +136,7 @@ function BentoGridMobile({ posts }: { posts: Post[] }) {
                   <span className="text-[9px]">{post.likes_count || 0}</span>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       ))}
@@ -171,6 +179,11 @@ function CreatePostModal({ open, onClose, onPublished }: { open: boolean; onClos
 
   const handlePublish = async () => {
     if (!user || !selected) return;
+    const moderation = validateCommunityText(caption || selected.title || selected.topic || '');
+    if (!moderation.allowed) {
+      toast.error(moderation.message);
+      return;
+    }
     setPublishing(true);
     try {
       const coverUrl = selected.cover_url || selected.carousel_data?.cards?.[0]?.imageUrl || null;
@@ -300,11 +313,26 @@ function CommunityContent() {
   const loadPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: postsData } = await supabase
-        .from('community_posts')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(60) as any;
+      const [postsResponse, blocksResponse] = await Promise.all([
+        supabase
+          .from('community_posts')
+          .select('*')
+          .eq('moderation_status', 'visible')
+          .order('created_at', { ascending: false })
+          .limit(60),
+        user
+          ? supabase
+              .from('community_user_blocks')
+              .select('blocked_user_id')
+              .eq('blocker_user_id', user.id)
+          : Promise.resolve({ data: [], error: null }),
+      ] as const) as any;
+
+      if (postsResponse.error) throw postsResponse.error;
+      if (blocksResponse.error) throw blocksResponse.error;
+
+      const blockedIds = new Set<string>((blocksResponse.data || []).map((row: any) => row.blocked_user_id));
+      const postsData = (postsResponse.data || []).filter((post: Post) => !blockedIds.has(post.user_id));
 
       if (!postsData || postsData.length === 0) { setPosts([]); return; }
 

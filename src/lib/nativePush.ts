@@ -8,7 +8,7 @@ export const isNativePushSupported = () =>
 export async function registerNativeDeviceToken(token: string) {
   if (!token) return;
 
-  const { error } = await supabase.functions.invoke('register-device', {
+  const { error } = await supabase.functions.invoke('ellocontent-push', {
     body: {
       action: 'register',
       token,
@@ -40,7 +40,7 @@ export async function disableNativePushNotifications() {
   if (!isNativePushSupported()) return;
 
   try {
-    await supabase.functions.invoke('register-device', {
+    await supabase.functions.invoke('ellocontent-push', {
       body: { action: 'unregister-all' },
     });
   } finally {

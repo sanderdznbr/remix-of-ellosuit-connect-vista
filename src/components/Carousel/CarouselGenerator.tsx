@@ -108,6 +108,7 @@ const resilientInvoke = async (fnName: string, body: Record<string, unknown>) =>
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useCarouselRouteSync } from '@/hooks/useCarouselRouteSync';
 import { useAuth } from '@/components/AuthProvider';
+import { isNativeIOS } from '@/lib/platform';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8135,6 +8136,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 {user ? (
                   <button
                     onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); navigate('/'); }}
+                    aria-label="Voltar ao início"
                     className="p-2 rounded-xl hover:bg-white/10 transition-colors"
                   >
                     <Home className="w-5 h-5 text-white/60" />
@@ -9489,6 +9491,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); }}
+                  aria-label="Voltar ao início"
                   className="p-2 rounded-xl hover:bg-white/10 transition-colors"
                 >
                   <Home className="w-5 h-5 text-white/60" />
@@ -10115,6 +10118,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   {activeCardIndex > 0 && (
                     <button
                       onClick={() => setActiveCardIndex(prev => Math.max(0, prev - 1))}
+                      aria-label="Card anterior"
                       className="absolute left-2 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
                       style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
                       <ChevronLeft className="h-4 w-4 text-white/60" />
@@ -10181,6 +10185,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   {activeCardIndex < carouselData.cards.length - 1 && (
                     <button
                       onClick={() => setActiveCardIndex(prev => Math.min(carouselData.cards.length - 1, prev + 1))}
+                      aria-label="Próximo card"
                       className="absolute right-2 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
                       style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
                       <ChevronRight className="h-4 w-4 text-white/60" />
@@ -10198,6 +10203,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     return (
                       <button
                         key={i}
+                        aria-label={`Abrir card ${i + 1}${i === activeCardIndex ? ', selecionado' : ''}`}
+                        aria-pressed={i === activeCardIndex}
                         draggable={!isCardLocked(i)}
                         onDragStart={(e) => { setDragCardIndex(i); e.dataTransfer.effectAllowed = 'move'; }}
                         onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOverCardIndex !== i) setDragOverCardIndex(i); }}
@@ -10474,7 +10481,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           </div>
                           <span className="text-[15px] font-semibold text-white tracking-tight">Ferramentas</span>
                         </div>
-                        <button onClick={() => setShowMobileToolsSheet(false)} className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-white/[0.06] transition-colors">
+                        <button onClick={() => setShowMobileToolsSheet(false)} aria-label="Fechar ferramentas" className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-white/[0.06] transition-colors">
                           <X className="h-4 w-4 text-white/30" />
                         </button>
                       </div>
@@ -10685,7 +10692,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           </div>
                           <span className="text-[15px] font-semibold text-white tracking-tight">Estilo atual</span>
                         </div>
-                        <button onClick={() => setShowStylePreview(false)} className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-white/[0.06] transition-colors">
+                        <button onClick={() => setShowStylePreview(false)} aria-label="Fechar prévia do estilo" className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-white/[0.06] transition-colors">
                           <X className="h-4 w-4 text-white/30" />
                         </button>
                       </div>
@@ -10766,6 +10773,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06]">
                     <button
                       onClick={() => setShowFullScreenStylePicker(false)}
+                      aria-label="Voltar ao editor"
                       className="p-2 rounded-xl hover:bg-white/10 transition-colors"
                     >
                       <ChevronLeft className="h-5 w-5 text-white/60" />
@@ -11048,7 +11056,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <Lock className="w-8 h-8 mb-3" style={{ color: themeHex }} />
                           <p className="text-white font-semibold text-sm mb-1">Card bloqueado</p>
                           <p className="text-white/50 text-xs mb-4 text-center px-6">Cadastre-se para desbloquear todos os cards</p>
-                          <button onClick={() => navigate('/checkout')}
+                          <button onClick={() => navigate('/register')}
                             className="px-5 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
                             style={{ background: `linear-gradient(135deg, ${themeHex} 0%, ${themeHexDark} 100%)` }}>
                             Cadastrar e Desbloquear
@@ -11168,7 +11176,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           {styleChangeSource === 'add-card' ? 'Escolha o estilo do novo card' : styleChangeSource === 'recreate' ? 'Escolha um estilo' : 'Estilo'}
                         </h3>
                       </div>
-                      <button onClick={() => setShowStylePanel(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                      <button onClick={() => setShowStylePanel(false)} aria-label="Fechar estilos" className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
                         <X className="h-4 w-4 text-white/60" />
                       </button>
                     </div>
@@ -11315,7 +11323,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <FileText className="h-4 w-4" style={{ color: themeHex }} />
                           <h3 className="text-sm font-semibold text-white">Legenda da Publicação</h3>
                         </div>
-                        <button onClick={() => setShowCaptionPanel(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                        <button onClick={() => setShowCaptionPanel(false)} aria-label="Fechar legenda" className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
                           <X className="h-4 w-4 text-white/50" />
                         </button>
                       </div>
@@ -11389,7 +11397,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             >
                               <Copy className="h-4 w-4 text-white/40" />
                             </button>
-                            <button onClick={() => setShowCaptionPanel(false)} className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-white/[0.06] transition-colors">
+                            <button onClick={() => setShowCaptionPanel(false)} aria-label="Fechar legenda" className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-white/[0.06] transition-colors">
                               <X className="h-4 w-4 text-white/30" />
                             </button>
                           </div>
@@ -11427,7 +11435,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.15), rgba(${themeRgb},0.05))`, border: `1px solid rgba(${themeRgb},0.2)` }}>
                   <Lock className="h-4 w-4 shrink-0" style={{ color: themeHex }} />
                   <p className="text-xs text-white/60 flex-1">Cadastre-se para desbloquear todos os cards, salvar e exportar seus carrosséis.</p>
-                  <button onClick={() => navigate('/checkout')}
+                  <button onClick={() => navigate('/register')}
                     className="px-4 py-2 rounded-xl text-xs font-bold text-white shrink-0 transition-all hover:opacity-90"
                     style={{ background: `linear-gradient(135deg, ${themeHex} 0%, ${themeHexDark} 100%)` }}>
                     Cadastrar
@@ -12458,7 +12466,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {/* Editor top bar - dark */}
             <div className="flex items-center justify-between px-3 sm:px-4 py-2 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(0,0,0,0.9)' }}>
               <div className="flex items-center gap-2">
-                <button onClick={() => setEditingCard(null)} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+                <button onClick={() => setEditingCard(null)} aria-label="Voltar ao carrossel" className="p-2 rounded-xl hover:bg-white/10 transition-colors">
                   <ArrowLeft className="h-5 w-5 text-white/70" />
                 </button>
                 <h2 className="font-bold text-white text-sm sm:text-base">Editando Card {validIndex + 1}</h2>
@@ -12895,16 +12903,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             </div>
             <h2 className="text-white text-xl font-bold mb-2">Gostou do resultado?</h2>
             <p className="text-white/50 text-sm mb-6 leading-relaxed">
-              Para baixar, editar e criar conteúdos ilimitados com IA, crie sua conta.
+              Para baixar, editar e continuar criando conteúdos com IA, crie sua conta.
             </p>
             <div className="space-y-3">
-              <button
-                onClick={() => { setShowGuestPaywall(false); navigate('/precos'); }}
-                className="w-full py-3.5 rounded-xl text-sm font-bold cursor-pointer transition-all"
-                style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, #E84D1A 0%, #C43A0F 100%)' : 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)', color: '#fff' }}
-              >
-                Ver planos e assinar
-              </button>
+              {!isNativeIOS() && (
+                <button
+                  onClick={() => { setShowGuestPaywall(false); navigate('/precos'); }}
+                  className="w-full py-3.5 rounded-xl text-sm font-bold cursor-pointer transition-all"
+                  style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, #E84D1A 0%, #C43A0F 100%)' : 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)', color: '#fff' }}
+                >
+                  Ver planos e assinar
+                </button>
+              )}
               <button
                 onClick={() => { setShowGuestPaywall(false); navigate('/register'); }}
                 className="w-full py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all border"

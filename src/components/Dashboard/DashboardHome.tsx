@@ -111,11 +111,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
   useEffect(() => { fetchRecent(); }, [user]);
 
-  // Refetch every time the component mounts (e.g., returning from generator)
-  useEffect(() => {
-    fetchRecent();
-  }, []);
-
   // Refetch when tab/window becomes visible (user navigated back)
   useEffect(() => {
     const handleVisibility = () => { if (document.visibilityState === 'visible') fetchRecent(); };
@@ -469,6 +464,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 <button
                   onClick={handleSubmit}
                   disabled={!inputValue.trim() || isGenerating}
+                  aria-label={isGenerating ? 'Gerando post' : 'Criar post'}
                   data-home-send-button
                   className="relative z-[5] w-9 h-9 shrink-0 overflow-hidden rounded-full flex items-center justify-center cursor-pointer transition-opacity"
                   style={{

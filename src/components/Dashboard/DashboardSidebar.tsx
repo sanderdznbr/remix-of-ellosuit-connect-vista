@@ -11,6 +11,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import faviconIcon from '@/assets/favicon.png';
 import TrialStatusBadge from './TrialStatusBadge';
+import { isNativeIOS } from '@/lib/platform';
 
 interface DashboardSidebarProps {
   activeTab: string;
@@ -283,13 +284,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       <div className="shrink-0 border-t border-white/[0.03] relative z-10" style={{ background: 'rgba(0,0,0,0.25)' }}>
         {collapsed ? (
           <div className="flex flex-col items-center py-3 gap-2">
-            <TrialStatusBadge collapsed />
+            {!isNativeIOS() && <TrialStatusBadge collapsed />}
             {onToggleCollapse && (
               <button onClick={onToggleCollapse} className="p-2 rounded-md hover:bg-white/[0.05] text-white/25 hover:text-white/60 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20" title="Expandir" aria-label="Expandir sidebar" aria-expanded={false} aria-controls="dashboard-sidebar-nav">
                 <PanelLeftOpen className="w-[15px] h-[15px]" />
               </button>
             )}
-            <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="p-2 rounded-md hover:bg-white/[0.05] text-white/40 hover:text-white/70 transition-colors cursor-pointer" title={email}>
+            <button onClick={() => setShowProfileMenu(!showProfileMenu)} aria-label="Abrir menu do perfil" aria-expanded={showProfileMenu} className="p-2 rounded-md hover:bg-white/[0.05] text-white/40 hover:text-white/70 transition-colors cursor-pointer" title={email}>
               <User className="w-[15px] h-[15px]" />
             </button>
             {showProfileMenu && (
@@ -300,7 +301,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
                 <div className="py-1">
                   <button onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><User className="w-4 h-4" /> Perfil</button>
                   <button onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><Settings className="w-4 h-4" /> Configurações</button>
-                  <button onClick={() => { setShowProfileMenu(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><CreditCard className="w-4 h-4" /> Plano & Créditos</button>
+                  {!isNativeIOS() && <button onClick={() => { setShowProfileMenu(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><CreditCard className="w-4 h-4" /> Plano & Créditos</button>}
                 </div>
                 <div className="border-t border-white/[0.06] py-1">
                   <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer"><LogOut className="w-4 h-4" /> Sair</button>
@@ -310,8 +311,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           </div>
         ) : (
           <>
-            <div className="pt-2 pb-1"><TrialStatusBadge /></div>
-            {(() => {
+            {!isNativeIOS() && <div className="pt-2 pb-1"><TrialStatusBadge /></div>}
+            {!isNativeIOS() && (() => {
               const balance = displayBalance ?? 0;
               const planNameLower = planName.toLowerCase();
               const planLabel = planNameLower.includes('growth') ? 'Growth' : planNameLower.includes('pro') ? 'Pro' : planNameLower.includes('starter') ? 'Starter' : 'Free';
@@ -321,7 +322,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
               const monthlyMarkerPct = monthlyCredits > 0 ? Math.min(100, (monthlyCredits / maxBar) * 100) : 0;
               const bonusCredits = monthlyCredits > 0 ? Math.max(0, balance - monthlyCredits) : 0;
               return (
-                <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors" onClick={() => navigate('/precos')}>
+                <div
+                  className={`px-4 py-3 transition-colors ${isNativeIOS() ? '' : 'cursor-pointer hover:bg-white/[0.02]'}`}
+                  onClick={() => { if (!isNativeIOS()) navigate('/precos'); }}
+                >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[9px] font-semibold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded" style={{ backgroundColor: `${planColor}18`, color: planColor }}>{planLabel}</span>
                     <span className="text-white/60 text-[11px] font-medium tabular-nums">{Math.floor(balance)} restantes</span>
@@ -346,7 +350,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
             })()}
 
             <div className="relative px-2 pb-2">
-              <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/[0.03] transition-colors cursor-pointer">
+              <button onClick={() => setShowProfileMenu(!showProfileMenu)} aria-label="Abrir menu do perfil" aria-expanded={showProfileMenu} className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/[0.03] transition-colors cursor-pointer">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-semibold text-white/80" style={{ background: 'linear-gradient(135deg, #7C3AED, #4C1D95)' }}>
                     {email.charAt(0).toUpperCase()}
@@ -363,7 +367,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
                   <div className="py-1">
                     <button onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><User className="w-4 h-4" /> Perfil</button>
                     <button onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><Settings className="w-4 h-4" /> Configurações</button>
-                    <button onClick={() => { setShowProfileMenu(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><CreditCard className="w-4 h-4" /> Plano & Créditos</button>
+                    {!isNativeIOS() && <button onClick={() => { setShowProfileMenu(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><CreditCard className="w-4 h-4" /> Plano & Créditos</button>}
                   </div>
                   <div className="border-t border-white/[0.06] py-1">
                     <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer"><LogOut className="w-4 h-4" /> Sair</button>
@@ -372,9 +376,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
               )}
             </div>
             <div className="px-4 pb-3 flex justify-center">
-              <a href="https://www.ellosuit.online" target="_blank" rel="noopener noreferrer" className="text-[9px] text-white/15 hover:text-white/35 transition-colors tracking-wide">
-                Powered by <span className="font-semibold">ellosuit</span>
-              </a>
+              <p className="text-[9px] text-white/20 tracking-wide">
+                Criativize Tecnologia
+              </p>
             </div>
           </>
         )}

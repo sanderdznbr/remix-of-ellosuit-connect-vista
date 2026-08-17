@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Zap, SlidersHorizontal, Sparkles, Lock, Twitter, Film, HelpCircle, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { isNativeIOS } from '@/lib/platform';
 
 interface Props {
   wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2' | 'animated';
@@ -82,6 +83,12 @@ const StepMode: React.FC<Props> = ({
 }) => {
   const navigate = useNavigate();
   const [showFaq, setShowFaq] = useState(false);
+  const nativeIOS = isNativeIOS();
+  const creditFaq = nativeIOS
+    ? CREDIT_FAQ.map(item => item.q === 'Os criativos renovam?'
+      ? { ...item, a: 'O saldo disponível e eventuais renovações aparecem automaticamente na sua conta.' }
+      : item)
+    : CREDIT_FAQ;
 
   const isLocked = (key: string) => {
     if (key === 'advanced') return !allowAdvanced;
@@ -130,7 +137,10 @@ const StepMode: React.FC<Props> = ({
             <button
               key={m.key}
               onClick={() => {
-                if (locked) { navigate('/precos'); return; }
+                if (locked) {
+                  if (!nativeIOS) navigate('/precos');
+                  return;
+                }
                 setWizardMode(m.key);
               }}
               className={`flex items-center gap-3 p-4 rounded-2xl text-left transition-all border relative ${
@@ -170,13 +180,15 @@ const StepMode: React.FC<Props> = ({
                   )}
                   {locked && (
                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-yellow-500/15 text-yellow-400 tracking-wider">
-                      {getRequiredPlan(m.key)}+
+                      {nativeIOS ? 'INDISPONÍVEL' : `${getRequiredPlan(m.key)}+`}
                     </span>
                   )}
                 </div>
                 <span className="text-xs text-white/40 block mt-0.5">{m.steps}</span>
                 <span className="text-[10px] text-white/25 block mt-0.5">
-                  {locked ? `Disponível a partir do plano ${getRequiredPlan(m.key)}` : m.desc}
+                  {locked
+                    ? nativeIOS ? 'Não disponível para esta conta no aplicativo' : `Disponível a partir do plano ${getRequiredPlan(m.key)}`
+                    : m.desc}
                 </span>
               </div>
             </button>
@@ -220,7 +232,7 @@ const StepMode: React.FC<Props> = ({
 
               {/* FAQ items */}
               <div className="space-y-2.5">
-                {CREDIT_FAQ.map((item, i) => (
+                {creditFaq.map((item, i) => (
                   <div key={i}>
                     <p className="text-[11px] font-semibold text-white/50">{item.q}</p>
                     <p className="text-[11px] text-white/25 mt-0.5">{item.a}</p>

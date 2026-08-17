@@ -723,7 +723,7 @@ const ChatCreator: React.FC = () => {
 
     } catch (err: any) {
       console.error('generation error:', err);
-      supabase.functions.invoke('send-push', {
+      supabase.functions.invoke('ellocontent-push', {
         body: {
           title: 'Não foi possível gerar o post',
           body: 'A geração falhou. Toque para voltar ao chat e tentar novamente.',
@@ -1194,6 +1194,7 @@ const ChatCreator: React.FC = () => {
               <button
                 onClick={() => sendMessage(input)}
                 disabled={(!input.trim() && attachments.length === 0) || loading || generating}
+                aria-label={loading ? 'Enviando mensagem' : 'Enviar mensagem'}
                 className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
                 style={{ backgroundColor: (input.trim() || attachments.length > 0) ? '#ffffff' : 'rgba(255,255,255,0.1)' }}
               >

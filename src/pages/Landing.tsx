@@ -52,14 +52,14 @@ const Landing: React.FC = () => {
             .eq('is_active', true)
             .order('is_featured', { ascending: false })
             .order('sort_order', { ascending: true })
-            .limit(24),
+            .limit(nativeIOS ? 8 : 24),
           supabase.from('generated_carousels')
             .select('id, title, cover_url, created_at, marketplace_style_id')
             .not('cover_url', 'is', null)
             .not('marketplace_style_id', 'is', null)
             .eq('status', 'completed')
             .order('created_at', { ascending: false })
-            .limit(60),
+            .limit(nativeIOS ? 12 : 36),
         ]);
         setStyles(((sData || []) as any[]).filter(s => s.preview_images?.length));
         const seen = new Set<string>();
@@ -71,11 +71,11 @@ const Landing: React.FC = () => {
             seen.add(k);
             return true;
           })
-          .slice(0, 24)
+          .slice(0, nativeIOS ? 8 : 24)
         );
       } catch {}
     })();
-  }, []);
+  }, [nativeIOS]);
 
   const heroTiles = useMemo(() => {
     const covers = posts.map(p => ({ src: p.cover_url, label: p.title }));
@@ -101,7 +101,7 @@ const Landing: React.FC = () => {
         paddingTop: 'env(safe-area-inset-top, 0px)',
       }}>
         <div className="max-w-[1400px] mx-auto flex items-center justify-between px-6 md:px-10 h-16">
-          <img src={ellocontentLogo} alt="ellocontent" className="h-4 cursor-pointer"
+          <img src={ellocontentLogo} alt="ellocontent" decoding="async" className="h-4 cursor-pointer"
                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
           <nav className="hidden md:flex items-center gap-8 text-[13px] font-medium"
                style={{ color: 'rgba(245,245,247,0.65)' }}>
@@ -368,7 +368,7 @@ const Landing: React.FC = () => {
                 className="relative shrink-0 w-[260px] md:w-[320px] aspect-[4/5] overflow-hidden group rounded-2xl"
                 style={{ background: '#101018', border: '1px solid rgba(255,255,255,0.08)',
                          boxShadow: '0 30px 60px -30px rgba(139,92,246,0.35)' }}>
-                <img src={p.cover_url} alt={p.title} loading="lazy"
+                <img src={p.cover_url} alt={p.title} loading="lazy" decoding="async"
                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                      style={{ objectPosition: 'center top' }} />
                 <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(5,5,5,0.92) 100%)' }} />
@@ -387,7 +387,7 @@ const Landing: React.FC = () => {
                 className="relative shrink-0 w-[260px] md:w-[320px] aspect-[4/5] overflow-hidden rounded-2xl"
                 style={{ background: '#101018', border: '1px solid rgba(255,255,255,0.08)',
                          boxShadow: '0 30px 60px -30px rgba(139,92,246,0.35)' }}>
-                <img src={s.preview_images[0]} alt={s.name} loading="lazy"
+                <img src={s.preview_images[0]} alt={s.name} loading="lazy" decoding="async"
                      className="absolute inset-0 w-full h-full object-cover"
                      style={{ objectPosition: 'center top' }} />
                 <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(5,5,5,0.92) 100%)' }} />
@@ -496,7 +496,7 @@ const Landing: React.FC = () => {
             {[
               { q: 'Preciso saber design para usar?', a: 'Não. Escolha um estilo curado, descreva o tema e a ellocontent monta o carrossel — tipografia, hierarquia e paleta prontas.' },
               { q: 'Posso usar minhas próprias fotos?', a: 'Sim. Faça upload de rosto, produto e logo — a IA prioriza suas referências e mantém fidelidade visual.' },
-              { q: 'Como funcionam os criativos?', a: 'Cada geração completa (post ou carrossel) consome 1 criativo. Os planos renovam mensalmente e você pode comprar pacotes avulsos via PIX ou cartão a qualquer momento.' },
+              { q: 'Como funcionam os criativos?', a: nativeIOS ? 'Cada geração completa (post ou carrossel) consome 1 criativo do saldo disponível na sua conta.' : 'Cada geração completa (post ou carrossel) consome 1 criativo. Os planos renovam mensalmente e você pode comprar pacotes avulsos via PIX ou cartão a qualquer momento.' },
               { q: 'Publica direto no Instagram?', a: 'Sim, via integração oficial Meta. Você conecta sua conta Business e agenda a publicação sem sair da plataforma.' },
               { q: 'Posso cancelar quando quiser?', a: 'Sim, sem multa. Créditos acumulados continuam válidos mesmo após o downgrade.' },
             ].map((item, i) => (
@@ -542,7 +542,7 @@ const Landing: React.FC = () => {
       {/* FOOTER */}
       <footer className="relative border-t px-6 md:px-10 py-10" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
         <div className="max-w-[1400px] mx-auto flex flex-wrap items-center justify-between gap-6">
-          <img src={ellocontentLogo} alt="ellocontent" className="h-4" />
+          <img src={ellocontentLogo} alt="ellocontent" loading="lazy" decoding="async" className="h-4" />
           <p className="text-[12px]" style={{ color: 'rgba(245,245,247,0.4)' }}>
             © {new Date().getFullYear()} ellocontent · Feito no Brasil
           </p>
@@ -571,7 +571,7 @@ const Landing: React.FC = () => {
 const StyleCard: React.FC<{ src: string; name: string; tag: string; featured?: boolean }> = ({ src, name, tag, featured }) => (
   <div className={`relative overflow-hidden group rounded-2xl ${featured ? 'col-span-2 row-span-2 aspect-square' : 'aspect-[4/5]'}`}
        style={{ background: '#14141C', border: '1px solid rgba(255,255,255,0.06)' }}>
-    {src && <img src={src} alt={name} loading="lazy"
+    {src && <img src={src} alt={name} loading="lazy" decoding="async"
                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                  style={{ objectPosition: 'center top' }} />}
     <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 45%, rgba(5,5,5,0.92) 100%)' }} />

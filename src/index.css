@@ -19,6 +19,20 @@ body[data-scroll-locked] {
   padding-right: 0 !important;
 }
 
+/* Apple HIG: controles devem manter uma área de toque de pelo menos 44 pt. */
+@media (pointer: coarse) {
+  button:not([role="switch"]),
+  [role="button"] {
+    min-height: 44px;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    min-height: 44px;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -607,4 +621,3 @@ body[data-scroll-locked] {
   .saber-border::before,
   .saber-border::after { animation: none; }
 }
-

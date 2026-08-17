@@ -2,11 +2,16 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AlertTriangle, CreditCard } from 'lucide-react';
 import { useSubscriptionGuard } from '@/hooks/useSubscriptionGuard';
+import { isNativeIOS } from '@/lib/platform';
 
 export function SubscriptionBlockedBanner() {
   const { isBlocked, status, planType, expiresAt, monthlyPrice } = useSubscriptionGuard();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Billing and external-payment recovery are intentionally absent from the
+  // iOS build. The server still enforces the user's available entitlements.
+  if (isNativeIOS()) return null;
 
   // Don't block on checkout, pricing, or auth pages
   const unblockPaths = ['/checkout', '/precos', '/auth', '/register', '/forgot-password'];

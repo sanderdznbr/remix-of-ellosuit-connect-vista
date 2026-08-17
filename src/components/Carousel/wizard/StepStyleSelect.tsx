@@ -4,6 +4,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { ShoppingBag, Loader2, Check, Sparkles, Crown, Zap, X, Search, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { STYLE_PRESETS, StylePreset } from './StepStyle';
 import { WizardAccentTheme, getThemeClasses } from './wizardTheme';
+import { isNativeIOS } from '@/lib/platform';
 
 interface MarketplaceStyle {
   id: string;
@@ -16,6 +17,7 @@ interface MarketplaceStyle {
   style_config: any;
   is_featured: boolean;
   tags: string[];
+  is_free?: boolean;
 }
 
 interface Props {
@@ -282,6 +284,7 @@ const StepStyleSelect: React.FC<Props> = ({
   selectedFont, setSelectedFont, onApplyPreset, onApplyMarketplaceStyle, accentTheme = 'purple', topic,
 }) => {
   const t = getThemeClasses(accentTheme);
+  const nativeIOS = isNativeIOS();
   const { user } = useAuth();
   const [purchasedStyles, setPurchasedStyles] = useState<MarketplaceStyle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -555,7 +558,7 @@ const StepStyleSelect: React.FC<Props> = ({
       </div>
 
       {/* Marketplace CTA */}
-      {user && (
+      {user && !nativeIOS && (
         <button
           onClick={() => setShowMarketplace(true)}
           className={`shrink-0 mt-3 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed ${t.borderLight} ${t.bgFaint} ${t.textLight} hover:bg-opacity-10 transition-all text-xs font-semibold cursor-pointer`}
@@ -581,7 +584,9 @@ const StepStyleSelect: React.FC<Props> = ({
             </div>
             <h3 className="text-lg font-bold text-white mb-2">Estilo "{lockedStyleName}"</h3>
             <p className="text-sm text-white/50 mb-5">
-              Liberado após contratação de um plano pago. Crie sua conta e escolha um plano para desbloquear todos os estilos.
+              {nativeIOS
+                ? 'Este estilo não está disponível para esta conta no aplicativo.'
+                : 'Liberado após contratação de um plano pago. Crie sua conta e escolha um plano para desbloquear todos os estilos.'}
             </p>
             <div className="flex gap-3">
               <button onClick={() => setLockedStyleName(null)}

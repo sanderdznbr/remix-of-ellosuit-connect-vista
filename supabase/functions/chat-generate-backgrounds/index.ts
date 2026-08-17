@@ -2,6 +2,8 @@
 // Uses Gemini 3 Pro Image (premium quality) to produce two distinct moods.
 // Returns base64 data URLs that the chat displays for the user to pick.
 
+import { requireAuthenticatedUser } from "../_shared/requireAuth.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -116,6 +118,9 @@ IMPORTANT: aspect ratio ${ratio}. NO text, NO words, NO logos, NO captions in th
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  const auth = await requireAuthenticatedUser(req, corsHeaders);
+  if (!auth.ok) return auth.response;
 
   try {
     if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');

@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Clock, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { isNativeIOS } from '@/lib/platform';
 
 export function ExpiringCreditsBanner() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const nativeIOS = isNativeIOS();
   const [expiringData, setExpiringData] = useState<{
     extraCredits: number;
     expiresAt: string;
@@ -15,7 +17,7 @@ export function ExpiringCreditsBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || nativeIOS) return;
 
     const check = async () => {
       try {
@@ -56,9 +58,9 @@ export function ExpiringCreditsBanner() {
     };
 
     check();
-  }, [user]);
+  }, [user, nativeIOS]);
 
-  if (!expiringData || dismissed) return null;
+  if (nativeIOS || !expiringData || dismissed) return null;
 
   const isUrgent = expiringData.daysLeft <= 7;
   const formattedDate = new Date(expiringData.expiresAt).toLocaleDateString('pt-BR', {
@@ -68,7 +70,7 @@ export function ExpiringCreditsBanner() {
 
   return (
     <div
-      className="relative mx-4 mt-3 mb-1 rounded-xl px-4 py-3 flex items-start gap-3"
+      className="relative mx-3 mt-2 mb-1 rounded-xl px-3 py-2.5 flex items-start gap-2.5 shrink-0 sm:mx-4 sm:mt-3 sm:px-4 sm:py-3 sm:gap-3"
       style={{
         backgroundColor: isUrgent ? 'rgba(239, 68, 68, 0.1)' : 'rgba(234, 179, 8, 0.1)',
         border: `1px solid ${isUrgent ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)'}`,
@@ -98,16 +100,18 @@ export function ExpiringCreditsBanner() {
             ? 'Renove seu plano para manter seus créditos, ou use-os antes que expirem.'
             : 'Seus créditos extras serão removidos caso não haja um plano ativo vinculado.'}
         </p>
-        <button
-          onClick={() => navigate('/precos')}
-          className="mt-2 text-xs font-medium px-3 py-1 rounded-lg transition-colors cursor-pointer"
-          style={{
-            backgroundColor: isUrgent ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)',
-            color: isUrgent ? '#fca5a5' : '#fde047',
-          }}
-        >
-          Renovar plano
-        </button>
+        {!nativeIOS && (
+          <button
+            onClick={() => navigate('/precos')}
+            className="mt-2 text-xs font-medium px-3 py-1 rounded-lg transition-colors cursor-pointer"
+            style={{
+              backgroundColor: isUrgent ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)',
+              color: isUrgent ? '#fca5a5' : '#fde047',
+            }}
+          >
+            Renovar plano
+          </button>
+        )}
       </div>
 
       <button

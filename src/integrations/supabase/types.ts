@@ -1957,6 +1957,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          moderation_status: string
           post_id: string
           updated_at: string
           user_id: string
@@ -1965,6 +1966,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          moderation_status?: string
           post_id: string
           updated_at?: string
           user_id: string
@@ -1973,6 +1975,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          moderation_status?: string
           post_id?: string
           updated_at?: string
           user_id?: string
@@ -1983,6 +1986,44 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_comment_reports: {
+        Row: {
+          comment_id: string
+          created_at: string
+          details: string | null
+          id: string
+          reason: string
+          reporter_user_id: string
+          status: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason: string
+          reporter_user_id: string
+          status?: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason?: string
+          reporter_user_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_comment_reports_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "community_post_comments"
             referencedColumns: ["id"]
           },
         ]
@@ -2016,6 +2057,44 @@ export type Database = {
           },
         ]
       }
+      community_post_reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          post_id: string
+          reason: string
+          reporter_user_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          post_id: string
+          reason: string
+          reporter_user_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          post_id?: string
+          reason?: string
+          reporter_user_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_post_reports_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_posts: {
         Row: {
           caption: string | null
@@ -2024,6 +2103,7 @@ export type Database = {
           created_at: string
           id: string
           likes_count: number
+          moderation_status: string
           user_id: string
         }
         Insert: {
@@ -2033,6 +2113,7 @@ export type Database = {
           created_at?: string
           id?: string
           likes_count?: number
+          moderation_status?: string
           user_id: string
         }
         Update: {
@@ -2042,6 +2123,7 @@ export type Database = {
           created_at?: string
           id?: string
           likes_count?: number
+          moderation_status?: string
           user_id?: string
         }
         Relationships: [
@@ -2053,6 +2135,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      community_user_blocks: {
+        Row: {
+          blocked_user_id: string
+          blocker_user_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_user_id: string
+          blocker_user_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_user_id?: string
+          blocker_user_id?: string
+          created_at?: string
+        }
+        Relationships: []
       }
       companies: {
         Row: {
@@ -3034,20 +3134,32 @@ export type Database = {
       device_tokens: {
         Row: {
           created_at: string | null
+          enabled: boolean
+          environment: string
           id: string
+          platform: string
           token: string
+          updated_at: string
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
+          enabled?: boolean
+          environment?: string
           id?: string
+          platform?: string
           token: string
+          updated_at?: string
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
+          enabled?: boolean
+          environment?: string
           id?: string
+          platform?: string
           token?: string
+          updated_at?: string
           user_id?: string | null
         }
         Relationships: []

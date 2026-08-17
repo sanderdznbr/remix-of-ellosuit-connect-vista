@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Save, X, Sparkles } from 'lucide-react';
+import { isNativeIOS } from '@/lib/platform';
 
 const SUPABASE_URL = 'https://jwddiyuezqrpuakazvgg.supabase.co';
 
@@ -13,6 +14,7 @@ interface CreateStyleFromImagesProps {
 }
 
 const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onOpenChange, imageBase64s }) => {
+  const nativeIOS = isNativeIOS();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('editorial');
@@ -334,10 +336,12 @@ ${dna.unique_features || 'Replicate the unique visual signatures from references
               </div>
             </div>
 
-            <button onClick={() => setIsFree(!isFree)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${isFree ? 'bg-green-500/20 text-green-300' : 'bg-white/[0.04] text-white/30'}`}>
-              {isFree ? '✓ Grátis' : '○ Pago (50 créditos / R$ 9,90)'}
-            </button>
+            {!nativeIOS && (
+              <button onClick={() => setIsFree(!isFree)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${isFree ? 'bg-green-500/20 text-green-300' : 'bg-white/[0.04] text-white/30'}`}>
+                {isFree ? '✓ Grátis' : '○ Pago (50 créditos / R$ 9,90)'}
+              </button>
+            )}
 
             <button onClick={handlePublish} disabled={saving || !name.trim()}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 text-white text-sm font-semibold hover:from-purple-500 hover:to-violet-500 transition-all disabled:opacity-50 cursor-pointer">

@@ -126,9 +126,9 @@ const Calendario: React.FC = () => {
 
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/60 transition-colors"><ChevronLeft className="w-4 h-4" /></button>
+            <button aria-label="Mês anterior" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/60 transition-colors"><ChevronLeft className="w-4 h-4" /></button>
             <span className="text-sm font-medium capitalize min-w-[180px] text-center text-white/80">{monthLabel}</span>
-            <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/60 transition-colors"><ChevronRight className="w-4 h-4" /></button>
+            <button aria-label="Próximo mês" onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/60 transition-colors"><ChevronRight className="w-4 h-4" /></button>
           </div>
           <button onClick={() => setCursor(new Date())} className="text-xs px-3 py-1.5 rounded-full border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors">Hoje</button>
         </div>
@@ -148,6 +148,7 @@ const Calendario: React.FC = () => {
               <button
                 key={i}
                 disabled={!c.date}
+                aria-label={c.date ? `${c.day} de ${monthLabel}${holiday ? `, ${holiday.name}` : ''}` : 'Dia fora do mês'}
                 onClick={() => c.date && setModalDate(c.date)}
                 className={`min-h-[96px] rounded-xl border p-2 text-left transition-colors ${
                   c.date ? 'border-white/[0.06] hover:bg-white/[0.04]' : 'border-transparent opacity-30'

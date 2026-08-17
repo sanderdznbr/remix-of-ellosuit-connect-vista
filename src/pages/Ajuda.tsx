@@ -8,8 +8,9 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import supportAgentImg from '@/assets/support-agent.jpg';
+import { isNativeIOS } from '@/lib/platform';
 
-const WHATSAPP_NUMBER = '5511999999999';
+const WHATSAPP_NUMBER = '5541987942674';
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20com%20o%20ellocontent`;
 const AGENT_NAME = 'Marina';
 
@@ -271,6 +272,7 @@ const ChatWidget: React.FC<{ open: boolean; onClose: () => void; seed?: string |
 /* ─────────────────────────── PAGE ─────────────────────────── */
 
 const Ajuda: React.FC = () => {
+  const nativeIOS = isNativeIOS();
   const [chatOpen, setChatOpen] = useState(false);
   const [chatSeed, setChatSeed] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -279,19 +281,33 @@ const Ajuda: React.FC = () => {
 
   const askInChat = (q: string) => { setChatSeed(q); setChatOpen(true); };
 
+  const availableCategories = useMemo(() => {
+    if (!nativeIOS) return CATEGORIES;
+    return CATEGORIES
+      .filter(category => category.id !== 'planos' && category.id !== 'marketplace')
+      .map(category => category.id !== 'creditos' ? category : {
+        ...category,
+        items: category.items
+          .filter(item => item.q !== 'Consigo comprar créditos extras?')
+          .map(item => item.q === 'Meus créditos expiram?'
+            ? { ...item, a: 'O saldo e eventuais renovações aparecem automaticamente na sua conta.' }
+            : item),
+      });
+  }, [nativeIOS]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return CATEGORIES;
-    return CATEGORIES
+    if (!q) return availableCategories;
+    return availableCategories
       .map(c => ({ ...c, items: c.items.filter(i => i.q.toLowerCase().includes(q) || (typeof i.a === 'string' && i.a.toLowerCase().includes(q))) }))
       .filter(c => c.items.length > 0);
-  }, [query]);
+  }, [availableCategories, query]);
 
   const active = filtered.find(c => c.id === activeCategory) || filtered[0];
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen text-white" style={{ backgroundColor: '#08080d' }}>
+      <div className="min-h-screen w-full overflow-x-hidden text-white" style={{ backgroundColor: '#08080d' }}>
         {/* HERO */}
         <div className="relative overflow-hidden">
           <div className="absolute inset-0 opacity-60 pointer-events-none"
@@ -305,7 +321,7 @@ const Ajuda: React.FC = () => {
               Como podemos <span style={{ background: 'linear-gradient(135deg, #A78BFA, #EC4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>te ajudar?</span>
             </h1>
             <p className="text-white/50 text-base max-w-lg mx-auto mb-8">
-              Respostas rápidas sobre créditos, geração, planos e o editor. Ou fale com a Marina em segundos.
+              Respostas rápidas sobre créditos, geração e o editor. Ou fale com a Marina em segundos.
             </p>
 
             {/* SEARCH */}
@@ -321,7 +337,7 @@ const Ajuda: React.FC = () => {
 
             {/* QUICK QUESTIONS */}
             <div className="flex flex-wrap justify-center gap-2 mt-5">
-              {QUICK.map((q, i) => (
+              {QUICK.filter(q => !nativeIOS || (!q.includes('Pro') && !q.includes('expiram'))).map((q, i) => (
                 <button key={i} onClick={() => askInChat(q)}
                   className="px-3.5 py-1.5 rounded-full text-[11px] text-white/60 hover:text-white border border-white/[0.06] hover:border-purple-500/30 transition-all"
                   style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
@@ -334,9 +350,9 @@ const Ajuda: React.FC = () => {
 
         {/* CATEGORY TABS + FAQ */}
         <div className="max-w-5xl mx-auto px-4 sm:px-8 pb-20">
-          <div className="grid lg:grid-cols-[240px,1fr] gap-8">
+          <div className="grid min-w-0 lg:grid-cols-[240px,1fr] gap-8">
             {/* Sidebar categories */}
-            <aside className="lg:sticky lg:top-6 self-start">
+            <aside className="min-w-0 lg:sticky lg:top-6 self-start">
               <p className="text-[10px] font-semibold text-white/30 uppercase tracking-widest mb-3 px-2">Categorias</p>
               <div className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible -mx-4 lg:mx-0 px-4 lg:px-0 pb-2 lg:pb-0">
                 {filtered.map(c => {
@@ -366,7 +382,7 @@ const Ajuda: React.FC = () => {
             </aside>
 
             {/* Content */}
-            <div>
+            <div className="min-w-0">
               {active ? (
                 <>
                   <div className="mb-6">
@@ -454,6 +470,8 @@ const Ajuda: React.FC = () => {
       {/* Floating chat button */}
       <motion.button
         onClick={() => setChatOpen(!chatOpen)}
+        aria-label={chatOpen ? 'Fechar chat com a Marina' : 'Abrir chat com a Marina'}
+        aria-expanded={chatOpen}
         className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #7C3AED, #6D28D9)', boxShadow: '0 10px 40px rgba(124,58,237,0.45)' }}
         whileHover={{ scale: 1.06 }}

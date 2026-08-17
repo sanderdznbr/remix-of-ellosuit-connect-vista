@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
-import { ArrowLeft, Copy, Heart, Loader2, MessageCircle, Send, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Copy, Heart, Loader2, MessageCircle, Send, User, ChevronLeft, ChevronRight, Flag, ShieldAlert, UserX, X } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
+import { communityReportReasons, type CommunityReportReason, validateCommunityText } from '@/lib/communityModeration';
 
 interface CommunityPost {
   id: string;
@@ -14,6 +15,7 @@ interface CommunityPost {
   cover_url: string | null;
   likes_count: number;
   created_at: string;
+  moderation_status?: string;
 }
 
 interface Profile {
@@ -28,6 +30,7 @@ interface CommentRow {
   user_id: string;
   content: string;
   created_at: string;
+  moderation_status?: string;
 }
 
 function PostContent() {
@@ -45,6 +48,10 @@ function PostContent() {
   const [commenting, setCommenting] = useState(false);
   const [carouselCards, setCarouselCards] = useState<{ imageUrl?: string; title?: string; body?: string }[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [safetyTarget, setSafetyTarget] = useState<{ type: 'post' | 'comment'; id: string } | null>(null);
+  const [reportReason, setReportReason] = useState<CommunityReportReason>('spam');
+  const [reportDetails, setReportDetails] = useState('');
+  const [submittingSafetyAction, setSubmittingSafetyAction] = useState(false);
 
   const shareLink = useMemo(() => `${window.location.origin}/post/${postId}`, [postId]);
 
@@ -56,7 +63,7 @@ function PostContent() {
     try {
       const { data: postData, error: postError } = await supabase
         .from('community_posts')
-        .select('id, user_id, carousel_id, caption, cover_url, likes_count, created_at')
+        .select('id, user_id, carousel_id, caption, cover_url, likes_count, created_at, moderation_status')
         .eq('id', postId)
         .maybeSingle();
 
@@ -66,14 +73,23 @@ function PostContent() {
       setPost(postData as CommunityPost);
       setLikesCount(postData.likes_count || 0);
 
-      const [authorRes, commentsRes, likeRes, carouselRes] = await Promise.all([
+      const [authorRes, commentsRes, likeRes, carouselRes, blocksRes] = await Promise.all([
         supabase.from('profiles').select('id, username, display_name, avatar_url').eq('id', postData.user_id).maybeSingle(),
-        supabase.from('community_post_comments').select('id, user_id, content, created_at').eq('post_id', postId).order('created_at', { ascending: false }),
+        supabase.from('community_post_comments').select('id, user_id, content, created_at, moderation_status').eq('post_id', postId).eq('moderation_status', 'visible').order('created_at', { ascending: false }),
         user ? supabase.from('community_post_likes').select('id').eq('post_id', postId).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null, error: null } as any),
         (postData as any).carousel_id
           ? (supabase.from('generated_carousels').select('id, carousel_data').eq('id', (postData as any).carousel_id).maybeSingle() as any)
           : Promise.resolve({ data: null, error: null }),
+        user
+          ? supabase.from('community_user_blocks').select('blocked_user_id').eq('blocker_user_id', user.id)
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
+
+      const blockedIds = new Set<string>(((blocksRes as any).data || []).map((row: any) => row.blocked_user_id));
+      if (blockedIds.has(postData.user_id) && postData.user_id !== user?.id) {
+        setPost(null);
+        return;
+      }
 
       setAuthor((authorRes.data as Profile) || null);
       setLiked(Boolean(likeRes.data));
@@ -82,7 +98,7 @@ function PostContent() {
         setCarouselCards(carouselRes.data.carousel_data.cards);
       }
 
-      const commentRows = (commentsRes.data as CommentRow[]) || [];
+      const commentRows = (((commentsRes.data as CommentRow[]) || []).filter((comment) => !blockedIds.has(comment.user_id)));
       if (commentRows.length > 0) {
         const uniqueUserIds = [...new Set(commentRows.map((c) => c.user_id))];
         const { data: profileRows } = await supabase
@@ -123,6 +139,11 @@ function PostContent() {
       if (!user) toast.error('Faça login para comentar');
       return;
     }
+    const moderation = validateCommunityText(commentText);
+    if (!moderation.allowed) {
+      toast.error(moderation.message);
+      return;
+    }
     setCommenting(true);
     try {
       const { data, error } = await supabase
@@ -147,6 +168,59 @@ function PostContent() {
       await navigator.clipboard.writeText(shareLink);
       toast.success('Link copiado!');
     } catch { toast.error('Não foi possível copiar o link'); }
+  };
+
+  const submitReport = async () => {
+    if (!user || !safetyTarget) {
+      toast.error('Faça login para denunciar conteúdo');
+      return;
+    }
+
+    setSubmittingSafetyAction(true);
+    try {
+      const table = safetyTarget.type === 'post' ? 'community_post_reports' : 'community_comment_reports';
+      const foreignKey = safetyTarget.type === 'post' ? 'post_id' : 'comment_id';
+      const { error } = await supabase.from(table).insert({
+        [foreignKey]: safetyTarget.id,
+        reporter_user_id: user.id,
+        reason: reportReason,
+        details: reportDetails.trim().slice(0, 400) || null,
+      } as any);
+
+      if (error?.code === '23505') {
+        toast.info('Você já denunciou este conteúdo. Nossa equipe fará a análise.');
+      } else if (error) {
+        throw error;
+      } else {
+        toast.success('Denúncia recebida. Obrigado por ajudar a manter a comunidade segura.');
+      }
+      setSafetyTarget(null);
+      setReportDetails('');
+      setReportReason('spam');
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível enviar a denúncia');
+    } finally {
+      setSubmittingSafetyAction(false);
+    }
+  };
+
+  const blockAuthor = async () => {
+    if (!user || !post || post.user_id === user.id) return;
+    setSubmittingSafetyAction(true);
+    try {
+      const { error } = await supabase.from('community_user_blocks').upsert({
+        blocker_user_id: user.id,
+        blocked_user_id: post.user_id,
+      } as any, { onConflict: 'blocker_user_id,blocked_user_id' });
+      if (error) throw error;
+      toast.success('Usuário bloqueado. O conteúdo dele não aparecerá mais para você.');
+      navigate('/comunidade', { replace: true });
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível bloquear este usuário');
+    } finally {
+      setSubmittingSafetyAction(false);
+      setSafetyTarget(null);
+    }
   };
 
   const fmtDate = (d: string) => {
@@ -278,6 +352,16 @@ function PostContent() {
             >
               <Copy className="w-4 h-4" /> Compartilhar
             </button>
+            {user && post.user_id !== user.id && (
+              <button
+                onClick={() => setSafetyTarget({ type: 'post', id: post.id })}
+                aria-label="Denunciar ou bloquear"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm cursor-pointer transition-colors"
+                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <ShieldAlert className="w-4 h-4" /> Segurança
+              </button>
+            )}
           </div>
 
           {/* Comments section */}
@@ -321,7 +405,7 @@ function PostContent() {
                         <span className="text-[9px] font-bold text-purple-400">{(c.profile?.display_name || '?')[0]?.toUpperCase()}</span>
                       )}
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-xs">
                         <button
                           onClick={() => c.profile?.username && navigate(`/perfil/${c.profile.username}`)}
@@ -331,7 +415,18 @@ function PostContent() {
                         </button>
                         <span className="text-white/40">{c.content}</span>
                       </p>
-                      <p className="text-[10px] text-white/15 mt-0.5">{fmtDate(c.created_at)}</p>
+                      <div className="mt-0.5 flex items-center justify-between gap-2">
+                        <p className="text-[10px] text-white/30">{fmtDate(c.created_at)}</p>
+                        {user && c.user_id !== user.id && (
+                          <button
+                            onClick={() => setSafetyTarget({ type: 'comment', id: c.id })}
+                            aria-label="Denunciar comentário"
+                            className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-[10px] text-white/45 hover:bg-white/5 hover:text-white/70"
+                          >
+                            <Flag className="h-3 w-3" /> Denunciar
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -340,6 +435,86 @@ function PostContent() {
           </div>
         </div>
       </div>
+
+      {safetyTarget && (
+        <div
+          className="fixed inset-0 z-[250] flex items-center justify-center bg-black/75 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="community-safety-title"
+          onClick={() => !submittingSafetyAction && setSafetyTarget(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-white/10 bg-[#171727] p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="community-safety-title" className="text-lg font-semibold text-white">Segurança da comunidade</h2>
+                <p className="mt-1 text-sm text-white/55">
+                  Denúncias são analisadas e conteúdo com múltiplas denúncias é ocultado preventivamente.
+                </p>
+              </div>
+              <button
+                onClick={() => setSafetyTarget(null)}
+                disabled={submittingSafetyAction}
+                aria-label="Fechar"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white/55 hover:bg-white/5 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <label className="mt-5 block text-sm font-medium text-white/80" htmlFor="community-report-reason">
+              Motivo da denúncia
+            </label>
+            <select
+              id="community-report-reason"
+              value={reportReason}
+              onChange={(event) => setReportReason(event.target.value as CommunityReportReason)}
+              className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none focus:border-purple-400"
+            >
+              {communityReportReasons.map((reason) => (
+                <option key={reason.value} value={reason.value} className="bg-[#171727]">{reason.label}</option>
+              ))}
+            </select>
+
+            <label className="mt-4 block text-sm font-medium text-white/80" htmlFor="community-report-details">
+              Detalhes opcionais
+            </label>
+            <textarea
+              id="community-report-details"
+              value={reportDetails}
+              onChange={(event) => setReportDetails(event.target.value.slice(0, 400))}
+              placeholder="Explique brevemente o problema"
+              className="mt-2 h-24 w-full resize-none rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white placeholder:text-white/35 outline-none focus:border-purple-400"
+            />
+
+            <button
+              onClick={submitReport}
+              disabled={submittingSafetyAction}
+              className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-500/15 px-4 text-sm font-semibold text-red-300 hover:bg-red-500/20 disabled:opacity-50"
+            >
+              {submittingSafetyAction ? <Loader2 className="h-4 w-4 animate-spin" /> : <Flag className="h-4 w-4" />}
+              Enviar denúncia
+            </button>
+
+            {safetyTarget.type === 'post' && user && post.user_id !== user.id && (
+              <button
+                onClick={blockAuthor}
+                disabled={submittingSafetyAction}
+                className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-medium text-white/70 hover:bg-white/5 disabled:opacity-50"
+              >
+                <UserX className="h-4 w-4" /> Bloquear usuário e ocultar conteúdo
+              </button>
+            )}
+
+            <p className="mt-4 text-center text-xs text-white/45">
+              Precisa de ajuda? Escreva para <a href="mailto:sander@criativize.com" className="text-purple-300 underline">sander@criativize.com</a>.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

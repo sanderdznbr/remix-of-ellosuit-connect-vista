@@ -3,8 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright config for E2E tests.
  *
- * Run with: bunx playwright test
- * First time only: bunx playwright install chromium
+ * Run with: npm exec playwright test
+ * First time only: npm exec playwright install chromium
  */
 export default defineConfig({
   testDir: './e2e',
@@ -27,7 +27,7 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: 'bun run dev',
+        command: 'npm run dev -- --host 127.0.0.1 --port 8080',
         url: 'http://localhost:8080',
         reuseExistingServer: true,
         timeout: 120_000,

@@ -213,6 +213,11 @@
   
   button, [role="button"] {
     cursor: pointer;
+    min-height: var(--mobile-touch-min);
+  }
+
+  button[aria-label], [role="button"][aria-label] {
+    min-width: var(--mobile-touch-min);
   }
 }
 

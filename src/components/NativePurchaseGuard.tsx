@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowLeft, CheckCircle2, Smartphone } from 'lucide-react';
+import { ArrowLeft, Smartphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { isNativeIOS } from '@/lib/platform';
 
@@ -27,15 +27,10 @@ export function NativePurchaseGuard({ children }: NativePurchaseGuardProps) {
         <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-500/15">
           <Smartphone className="h-7 w-7 text-purple-300" aria-hidden="true" />
         </div>
-        <h1 className="text-xl font-semibold text-white">Seu plano no ellocontent</h1>
+        <h1 className="text-xl font-semibold text-white">Área indisponível no iOS</h1>
         <p className="mt-3 text-sm leading-6 text-white/55">
-          Compras e alterações de plano não estão disponíveis nesta versão do aplicativo.
-          Se você já possui um plano, basta entrar com a mesma conta para acessar seus recursos.
+          Esta área não faz parte da versão para iPhone. Você pode continuar criando com os recursos disponíveis na sua conta.
         </p>
-        <div className="mt-5 flex items-center justify-center gap-2 text-xs text-emerald-300/80">
-          <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-          Seu plano e seus créditos continuam sincronizados
-        </div>
         <button
           type="button"
           onClick={() => navigate(-1)}

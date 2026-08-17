@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { getAuthRedirectUrl } from '@/lib/platform';
+import { disableNativePushNotifications } from '@/lib/nativePush';
 
 interface AuthContextType {
   user: User | null;
@@ -99,6 +100,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    await disableNativePushNotifications().catch((error) => {
+      console.error('Não foi possível remover o token de push antes de sair:', error);
+    });
     const { error } = await supabase.auth.signOut();
     return { error };
   };

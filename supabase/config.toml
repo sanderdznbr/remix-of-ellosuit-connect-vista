@@ -39,3 +39,9 @@ project_id = "jwddiyuezqrpuakazvgg"
     verify_jwt = false
   [functions.chat-compose-final]
     verify_jwt = false
+  [functions.register-device]
+    verify_jwt = false
+  [functions.send-push]
+    verify_jwt = false
+  [functions.ellocontent-push]
+    verify_jwt = false

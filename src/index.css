@@ -14,14 +14,23 @@ html, body {
   background-color: #0A0A0A !important;
   -webkit-overflow-scrolling: touch;
 }
-/* Lock scroll only on dashboard home (not globally) */
-html:has([data-dashboard-home]:not([data-has-chat])),
-html:has([data-dashboard-home]:not([data-has-chat])) body {
-  overflow: hidden !important;
-}
 body[data-scroll-locked] {
   margin-right: 0 !important;
   padding-right: 0 !important;
+}
+
+/* Apple HIG: controles devem manter uma área de toque de pelo menos 44 pt. */
+@media (pointer: coarse) {
+  button:not([role="switch"]),
+  [role="button"] {
+    min-height: 44px;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    min-height: 44px;
+  }
 }
 
 @layer base {
@@ -217,37 +226,6 @@ body[data-scroll-locked] {
   }
   .dark [data-mega-header] .shadow-xl {
     --tw-shadow-color: rgba(0, 0, 0, 0.15) !important;
-  }
-
-  /* ===== Dashboard Home: full-bleed behind navbar ===== */
-  @media (max-width: 767px) {
-    main:has([data-dashboard-home]) {
-      padding: 0 !important;
-      overflow: hidden !important;
-    }
-    [data-dashboard-home] {
-      position: fixed !important;
-      inset: 0 !important;
-      z-index: 1;
-      padding-top: calc(3.5rem + env(safe-area-inset-top)) !important;
-      padding-bottom: calc(4rem + env(safe-area-inset-bottom)) !important;
-    }
-    [data-dashboard-home]:not([data-has-chat]) {
-      touch-action: none;
-      overflow: hidden !important;
-    }
-    [data-dashboard-home][data-has-chat] {
-      overflow-y: auto !important;
-    }
-  }
-  @media (min-width: 768px) {
-    main:has([data-dashboard-home]) {
-      padding-bottom: 0 !important;
-      background: inherit;
-    }
-    main:has([data-dashboard-home]:not([data-has-chat])) {
-      overflow: hidden !important;
-    }
   }
 
   /* ===== Dashboard Home: preserve light mode always ===== */
@@ -643,5 +621,3 @@ body[data-scroll-locked] {
   .saber-border::before,
   .saber-border::after { animation: none; }
 }
-
-

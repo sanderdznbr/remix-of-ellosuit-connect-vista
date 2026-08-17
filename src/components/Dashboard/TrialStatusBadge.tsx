@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
+import { isNativeIOS } from '@/lib/platform';
 
 interface Props {
   collapsed?: boolean;
@@ -11,10 +12,11 @@ interface Props {
 const TrialStatusBadge: React.FC<Props> = ({ collapsed }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const nativeIOS = isNativeIOS();
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || nativeIOS) return;
     (async () => {
       try {
         const { data: cu } = await supabase
@@ -38,9 +40,9 @@ const TrialStatusBadge: React.FC<Props> = ({ collapsed }) => {
         setDaysLeft(Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24))));
       } catch {}
     })();
-  }, [user]);
+  }, [user, nativeIOS]);
 
-  if (daysLeft === null) return null;
+  if (nativeIOS || daysLeft === null) return null;
 
   const urgent = daysLeft <= 2;
   const color = urgent ? '#F59E0B' : '#8B5CF6';

@@ -12,11 +12,30 @@
         <scene sceneID="EHf-IW-A2E">
             <objects>
                 <viewController id="01J-lp-oVM" sceneMemberID="viewController">
-                    <imageView key="view" userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="Splash" id="snD-IY-ifK">
+                    <view key="view" contentMode="scaleToFill" id="snD-IY-ifK">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask"/>
-                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
-                    </imageView>
+                        <subviews>
+                            <imageView opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleAspectFit" image="LaunchLogo" translatesAutoresizingMaskIntoConstraints="NO" id="H1M-pO-logo">
+                                <rect key="frame" x="151.5" y="270.5" width="72" height="72"/>
+                            </imageView>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="ellocontent" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="LBL-ello-content">
+                                <rect key="frame" x="122.5" y="358.5" width="130" height="31"/>
+                                <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="26"/>
+                                <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                        </subviews>
+                        <color key="backgroundColor" red="0.03921568627" green="0.03921568627" blue="0.05882352941" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="H1M-pO-logo" firstAttribute="centerX" secondItem="snD-IY-ifK" secondAttribute="centerX" id="CEN-X-logo"/>
+                            <constraint firstItem="H1M-pO-logo" firstAttribute="centerY" secondItem="snD-IY-ifK" secondAttribute="centerY" constant="-27" id="CEN-Y-logo"/>
+                            <constraint firstItem="H1M-pO-logo" firstAttribute="width" constant="72" id="WID-logo"/>
+                            <constraint firstItem="H1M-pO-logo" firstAttribute="height" constant="72" id="HEI-logo"/>
+                            <constraint firstItem="LBL-ello-content" firstAttribute="centerX" secondItem="snD-IY-ifK" secondAttribute="centerX" id="CEN-X-label"/>
+                            <constraint firstItem="LBL-ello-content" firstAttribute="top" secondItem="H1M-pO-logo" secondAttribute="bottom" constant="16" id="TOP-label"/>
+                        </constraints>
+                    </view>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
@@ -24,9 +43,6 @@
         </scene>
     </scenes>
     <resources>
-        <image name="Splash" width="1366" height="1366"/>
-        <systemColor name="systemBackgroundColor">
-            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-        </systemColor>
+        <image name="LaunchLogo" width="96" height="96"/>
     </resources>
 </document>

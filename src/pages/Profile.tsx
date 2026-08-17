@@ -5,6 +5,7 @@ import { useAuth } from '@/components/AuthProvider';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, X, Check, Plus, Copy, Crown } from 'lucide-react';
 import { toast } from 'sonner';
+import { isNativeIOS } from '@/lib/platform';
 
 const PLAN_BADGES: Record<string, { label: string; color: string }> = {
   starter: { label: 'STARTER', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
@@ -48,6 +49,7 @@ const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const nativeIOS = isNativeIOS();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [carousels, setCarousels] = useState<CarouselItem[]>([]);
   const [communityPosts, setCommunityPosts] = useState<Set<string>>(new Set());
@@ -157,7 +159,8 @@ const ProfilePage: React.FC = () => {
           const ello = elloRes.data as any;
           const sub = subRes.data as any;
           if (ello?.status === 'active' || ello?.status === 'trialing') {
-            setPlanType(ello.plan_name?.toLowerCase());
+            const normalizedPlan = String(ello.plan_name || '').toLowerCase();
+            setPlanType(Object.keys(PLAN_BADGES).find((key) => normalizedPlan.includes(key)) || normalizedPlan);
             setPlanStatus(ello.status);
           } else if (sub && sub.status !== 'free') {
             setPlanType(sub.plan_type);
@@ -357,7 +360,8 @@ const ProfilePage: React.FC = () => {
             <>
               <button
                 onClick={() => bannerInputRef.current?.click()}
-                className="absolute top-3 right-3 p-2 rounded-xl bg-black/50 text-white/70 hover:text-white opacity-0 group-hover:opacity-100 transition-all cursor-pointer backdrop-blur-sm"
+                aria-label="Alterar banner do perfil"
+                className="absolute top-3 right-3 p-2 rounded-xl bg-black/50 text-white/70 hover:text-white opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all cursor-pointer backdrop-blur-sm"
               >
                 {uploading === 'banner' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
               </button>
@@ -368,8 +372,8 @@ const ProfilePage: React.FC = () => {
 
         {/* Avatar + Info */}
         <div className="px-4 sm:px-6 -mt-16 relative z-10">
-          <div className="flex items-end gap-4">
-            <div className="relative group">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <div className="relative group self-start shrink-0">
               <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 overflow-hidden" style={{ borderColor: '#0a0a0f', background: '#1a1a24' }}>
                 {profile.avatar_url ? (
                   <img src={profile.avatar_url} alt={profile.display_name || ''} className="w-full h-full object-cover" />
@@ -383,7 +387,8 @@ const ProfilePage: React.FC = () => {
                 <>
                   <button
                     onClick={() => avatarInputRef.current?.click()}
-                    className="absolute inset-0 rounded-2xl bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    aria-label="Alterar foto do perfil"
+                    className="absolute inset-0 rounded-2xl bg-black/40 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer"
                   >
                     {uploading === 'avatar' ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : <Camera className="w-5 h-5 text-white" />}
                   </button>
@@ -391,10 +396,10 @@ const ProfilePage: React.FC = () => {
                 </>
               )}
             </div>
-            <div className="flex-1 pb-2">
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-white">{profile.display_name || 'Usuário'}</h1>
-                {planType && PLAN_BADGES[planType] && (planStatus === 'active' || planStatus === 'trialing') && (
+            <div className="w-full min-w-0 flex-1 sm:pb-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="min-w-0 text-xl sm:text-2xl font-bold text-white break-words">{profile.display_name || 'Usuário'}</h1>
+                {!nativeIOS && planType && PLAN_BADGES[planType] && (planStatus === 'active' || planStatus === 'trialing') && (
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${PLAN_BADGES[planType].color}`}>
                     <Crown className="w-3 h-3" />
                     {PLAN_BADGES[planType].label}
@@ -403,11 +408,11 @@ const ProfilePage: React.FC = () => {
               </div>
               <p className="text-sm text-white/30">@{profile.username}</p>
             </div>
-            <div className="flex gap-2">
-              {isOwnProfile && (
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
+              {isOwnProfile && !nativeIOS && (
                 <button
                   onClick={() => navigate('/configuracoes')}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-medium text-purple-300 border border-purple-500/20 hover:bg-purple-500/10 transition-colors cursor-pointer"
+                  className="flex min-h-10 flex-1 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center text-[11px] font-medium text-purple-300 border border-purple-500/20 hover:bg-purple-500/10 transition-colors cursor-pointer sm:flex-none"
                 >
                   Ver detalhes de assinatura
                 </button>
@@ -415,7 +420,7 @@ const ProfilePage: React.FC = () => {
               {isOwnProfile && !editing && (
                 <button
                   onClick={() => { setEditing(true); setEditForm({ display_name: profile.display_name, username: profile.username, bio: profile.bio, website: profile.website, instagram: profile.instagram }); }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/60 border border-white/[0.08] hover:bg-white/[0.04] transition-colors cursor-pointer"
+                  className="flex min-h-10 flex-1 items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/60 border border-white/[0.08] hover:bg-white/[0.04] transition-colors cursor-pointer sm:flex-none"
                 >
                   <Edit3 className="w-3.5 h-3.5" /> Editar perfil
                 </button>
@@ -506,7 +511,7 @@ const ProfilePage: React.FC = () => {
               <div className="w-full max-w-md mx-4 rounded-2xl border border-white/[0.08] p-6" style={{ backgroundColor: '#111116' }} onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-lg font-bold text-white">Criar Post</h3>
-                  <button onClick={() => setShowPostDialog(false)} className="text-white/30 hover:text-white/60 cursor-pointer"><X className="w-5 h-5" /></button>
+                  <button onClick={() => setShowPostDialog(false)} aria-label="Fechar criação de post" className="text-white/30 hover:text-white/60 cursor-pointer"><X className="w-5 h-5" /></button>
                 </div>
 
                 {/* Project Selection */}
@@ -523,7 +528,7 @@ const ProfilePage: React.FC = () => {
                         className={`relative rounded-xl overflow-hidden border-2 transition-all ${alreadyPublished ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'} ${isSelected ? 'border-purple-500 ring-2 ring-purple-500/30' : 'border-white/[0.06] hover:border-white/15'}`}
                       >
                         <div style={{ aspectRatio: '4/5' }} className="bg-white/[0.03]">
-                          {cover ? <img src={cover} alt={c.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/10 text-[10px]">Sem capa</div>}
+                          {cover ? <img src={cover} alt={c.title} className="w-full h-full object-cover" loading="lazy" decoding="async" /> : <div className="w-full h-full flex items-center justify-center text-white/10 text-[10px]">Sem capa</div>}
                         </div>
                         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
                           <p className="text-[9px] text-white/70 truncate">{c.title}</p>
@@ -578,13 +583,14 @@ const ProfilePage: React.FC = () => {
                         <div className="w-full h-full flex items-center justify-center text-white/10 text-xs">Sem capa</div>
                       )}
                     </div>
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
+                    <div className="absolute inset-0 bg-black/60 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity flex flex-col items-center justify-center gap-2 p-3">
                       <p className="text-white text-xs font-medium text-center line-clamp-2">{post.caption || 'Post'}</p>
                       <div className="flex items-center gap-1 text-white/40 text-[10px]">
                         <Heart className="w-3 h-3" /> {post.likes_count || 0}
                       </div>
                       <div className="flex gap-2 mt-1">
                         <button
+                          aria-label="Copiar link do post"
                           onClick={(e) => { e.stopPropagation(); copyPostLink(post.id); }}
                           className="px-3 py-1.5 rounded-lg text-[10px] font-medium text-white bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
                         >
@@ -592,6 +598,7 @@ const ProfilePage: React.FC = () => {
                         </button>
                         {isOwnProfile && (
                           <button
+                            aria-label="Remover post da comunidade"
                             onClick={(e) => {
                               e.stopPropagation();
                               const carousel = carousels.find(c => c.id === post.carousel_id);

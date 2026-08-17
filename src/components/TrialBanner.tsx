@@ -3,6 +3,7 @@ import { Sparkles, Gift, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
+import { isNativeIOS } from '@/lib/platform';
 
 interface TrialBannerProps {
   hasActiveSubscription: boolean;
@@ -12,11 +13,12 @@ interface TrialBannerProps {
 
 export const TrialBanner: React.FC<TrialBannerProps> = ({ hasActiveSubscription, companyId, onActivated }) => {
   const { user } = useAuth();
+  const nativeIOS = isNativeIOS();
   const [loading, setLoading] = useState(false);
   const [trialUsed, setTrialUsed] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!companyId) return;
+    if (!companyId || nativeIOS) return;
     (async () => {
       const { data } = await supabase
         .from('ellocontent_subscriptions')
@@ -26,9 +28,9 @@ export const TrialBanner: React.FC<TrialBannerProps> = ({ hasActiveSubscription,
         .limit(1);
       setTrialUsed(!!(data && data.length > 0));
     })();
-  }, [companyId]);
+  }, [companyId, nativeIOS]);
 
-  if (hasActiveSubscription || trialUsed === null || trialUsed) return null;
+  if (nativeIOS || hasActiveSubscription || trialUsed === null || trialUsed) return null;
   if (!user) return null;
 
   const start = async () => {

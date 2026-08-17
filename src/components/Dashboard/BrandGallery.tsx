@@ -690,7 +690,7 @@ const BrandGallery: React.FC = () => {
                       )}
                       <div className="aspect-square">
                         {file.file_type === 'image' ? (
-                          <img src={file.file_url} alt={file.name} className="w-full h-full object-cover" draggable={false} />
+                          <img src={file.file_url} alt={file.name} className="w-full h-full object-cover" draggable={false} loading="lazy" decoding="async" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <ImageIcon className="w-8 h-8 text-white/20" />
@@ -715,7 +715,7 @@ const BrandGallery: React.FC = () => {
                   <p className="text-sm text-white/30">
                     {currentFolder ? 'Nenhum arquivo nesta pasta ainda' : 'Crie uma pasta ou arraste arquivos aqui'}
                   </p>
-                  <p className="text-xs text-white/20 mt-1">Clique com botão direito para mais opções</p>
+                  <p className="text-xs text-white/20 mt-1">Toque em um item para ver mais opções</p>
                 </div>
               )
             )}

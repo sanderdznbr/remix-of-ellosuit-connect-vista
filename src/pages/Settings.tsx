@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import { CreditCard, Bell, Shield, Loader2, ChevronRight, Calendar, Receipt, Crown, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAuthRedirectUrl, isNativeIOS } from '@/lib/platform';
+import { disableNativePushNotifications, requestNativePushRegistration } from '@/lib/nativePush';
 
 interface SubscriptionData {
   plan_type: string;
@@ -65,7 +66,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'plan' | 'notifications' | 'account'>('plan');
+  const nativeIOS = isNativeIOS();
+  const [activeTab, setActiveTab] = useState<'plan' | 'notifications' | 'account'>(() => nativeIOS ? 'notifications' : 'plan');
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [elloSub, setElloSub] = useState<ElloSub | null>(null);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -85,6 +87,16 @@ const SettingsPage: React.FC = () => {
     }
     loadData();
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const saved = user.user_metadata?.notification_preferences || {};
+    setNotifSettings({
+      email_notifications: saved.email_notifications !== false,
+      push_notifications: saved.push_notifications !== false,
+      marketing_emails: saved.marketing_emails === true,
+    });
+  }, [user?.id, user?.user_metadata?.notification_preferences]);
 
   const loadData = async () => {
     if (!user) return;
@@ -149,7 +161,7 @@ const SettingsPage: React.FC = () => {
   const statusInfo = STATUS_LABELS[planStatus] || STATUS_LABELS.free;
 
   const tabs = [
-    { id: 'plan' as const, label: 'Plano', icon: Crown },
+    ...(!nativeIOS ? [{ id: 'plan' as const, label: 'Plano', icon: Crown }] : []),
     { id: 'notifications' as const, label: 'Notificações', icon: Bell },
     { id: 'account' as const, label: 'Conta', icon: Shield },
   ];
@@ -187,6 +199,41 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleNotificationToggle = async (key: keyof typeof notifSettings) => {
+    if (!user) return;
+    const previous = notifSettings;
+    const nextValue = !previous[key];
+    const next = { ...previous, [key]: nextValue };
+    setNotifSettings(next);
+
+    try {
+      if (key === 'push_notifications' && isNativeIOS()) {
+        if (nextValue) {
+          const permission = await requestNativePushRegistration();
+          if (!permission.granted) {
+            setNotifSettings(previous);
+            toast.error('Ative as notificações nos Ajustes do iPhone para receber os avisos.');
+            return;
+          }
+        } else {
+          await disableNativePushNotifications();
+        }
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          notification_preferences: next,
+        },
+      });
+      if (error) throw error;
+      toast.success('Preferência salva');
+    } catch (error) {
+      console.error('Erro ao salvar preferência de notificação:', error);
+      setNotifSettings(previous);
+      toast.error('Não foi possível salvar a preferência.');
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -203,11 +250,14 @@ const SettingsPage: React.FC = () => {
         <h1 className="text-2xl font-bold text-white mb-6">Configurações</h1>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 rounded-xl mb-6" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+        <div className="flex gap-1 p-1 rounded-xl mb-6" role="tablist" aria-label="Seções das configurações" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              aria-label={tab.label}
+              aria-selected={activeTab === tab.id}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                 activeTab === tab.id
                   ? 'bg-white/[0.08] text-white'
@@ -221,7 +271,7 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* Plan Tab */}
-        {activeTab === 'plan' && (
+        {!nativeIOS && activeTab === 'plan' && (
           <div className="space-y-4">
             {/* Current Plan Card */}
             <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ backgroundColor: '#111116' }}>
@@ -271,7 +321,7 @@ const SettingsPage: React.FC = () => {
                 </div>
               </div>
 
-              {!isNativeIOS() && <div className="border-t border-white/[0.06] p-4 flex gap-2">
+              <div className="border-t border-white/[0.06] p-4 flex gap-2">
                 <button
                   onClick={() => navigate('/precos')}
                   className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white cursor-pointer transition-all hover:opacity-90"
@@ -279,7 +329,7 @@ const SettingsPage: React.FC = () => {
                 >
                   {planPrice > 0 ? 'Gerenciar Plano' : 'Fazer Upgrade'}
                 </button>
-              </div>}
+              </div>
             </div>
 
             {/* Payment Method */}
@@ -343,7 +393,7 @@ const SettingsPage: React.FC = () => {
             <h3 className="text-sm font-semibold text-white mb-2">Preferências de Notificação</h3>
             {[
               { key: 'email_notifications', label: 'Notificações por e-mail', desc: 'Receba atualizações sobre seus posts e conta' },
-              { key: 'push_notifications', label: 'Notificações push', desc: 'Alertas no navegador sobre novidades' },
+              { key: 'push_notifications', label: 'Notificações push', desc: isNativeIOS() ? 'Avisos no iPhone quando seu post começar, terminar ou falhar' : 'Alertas sobre seus posts e novidades' },
               { key: 'marketing_emails', label: 'E-mails promocionais', desc: 'Novidades, dicas e ofertas especiais' },
             ].map((item) => (
               <div key={item.key} className="flex items-center justify-between py-3 border-b border-white/[0.04] last:border-0">
@@ -352,10 +402,10 @@ const SettingsPage: React.FC = () => {
                   <p className="text-[11px] text-white/25 mt-0.5">{item.desc}</p>
                 </div>
                 <button
-                  onClick={() => {
-                    setNotifSettings((prev) => ({ ...prev, [item.key]: !prev[item.key as keyof typeof prev] }));
-                    toast.success('Preferência salva');
-                  }}
+                  onClick={() => handleNotificationToggle(item.key as keyof typeof notifSettings)}
+                  role="switch"
+                  aria-label={item.label}
+                  aria-checked={notifSettings[item.key as keyof typeof notifSettings]}
                   className={`w-10 h-5 rounded-full transition-all relative cursor-pointer ${
                     notifSettings[item.key as keyof typeof notifSettings] ? 'bg-purple-500' : 'bg-white/10'
                   }`}
@@ -377,9 +427,9 @@ const SettingsPage: React.FC = () => {
             <div className="rounded-2xl border border-white/[0.06] p-5" style={{ backgroundColor: '#111116' }}>
               <h3 className="text-sm font-semibold text-white mb-4">Informações da Conta</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-white/40">E-mail</span>
-                  <span className="text-sm text-white/70">{user?.email}</span>
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-sm text-white/40 shrink-0">E-mail</span>
+                  <span className="text-sm text-white/70 break-all text-right">{user?.email}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/40">Conta criada em</span>

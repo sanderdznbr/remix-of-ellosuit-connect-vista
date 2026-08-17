@@ -71,13 +71,13 @@ const StyleRow: React.FC<{
         </h3>
         <div className="flex items-center gap-1">
           {canScrollLeft && (
-            <button onClick={() => scroll(-1)}
+            <button aria-label={`Ver estilos anteriores em ${title}`} onClick={() => scroll(-1)}
               className="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-white/30 hover:text-white/60 transition-colors">
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
           )}
           {canScrollRight && (
-            <button onClick={() => scroll(1)}
+            <button aria-label={`Ver mais estilos em ${title}`} onClick={() => scroll(1)}
               className="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-white/30 hover:text-white/60 transition-colors">
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -112,7 +112,17 @@ const StyleCard: React.FC<{
   const previewImage = style.style_config?.cover_image || style.preview_images?.[0];
 
   return (
-    <div onClick={onClick}
+    <div
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Abrir estilo ${style.name}`}
       className="group relative shrink-0 cursor-pointer transition-all duration-200 hover:scale-[1.03]"
       style={{ width: '150px' }}>
       <div className="relative rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.04] group-hover:border-white/[0.12] transition-colors"
@@ -161,13 +171,13 @@ const StyleCard: React.FC<{
         {/* Admin actions */}
         {isAdmin && (
           <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            <button onClick={(e) => { e.stopPropagation(); onToggleVisibility?.(); }}
+            <button aria-label={isHidden ? `Tornar ${style.name} visível` : `Ocultar ${style.name}`} onClick={(e) => { e.stopPropagation(); onToggleVisibility?.(); }}
               className={`p-1 rounded text-[8px] font-bold cursor-pointer shadow transition-colors ${
                 isHidden ? 'bg-green-500/90 text-white' : 'bg-red-500/80 text-white'
               }`}>
               {isHidden ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
             </button>
-            <button onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+            <button aria-label={`Editar ${style.name}`} onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
               className="p-1 rounded bg-yellow-500/90 text-black cursor-pointer hover:bg-yellow-400 shadow">
               <Pencil className="w-3 h-3" />
             </button>
